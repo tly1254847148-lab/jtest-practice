@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JTEST刷题系统 - 测试版</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', sans-serif; line-height: 1.6; color: #333; background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); min-height: 100vh; padding: 20px; }
+        .container { max-width: 800px; margin: 0 auto; background: white; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); overflow: hidden; }
+        .header { background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%); color: white; padding: 25px; text-align: center; }
+        .tab-container { display: flex; border-bottom: 2px solid #dee2e6; }
+        .tab { padding: 15px 25px; cursor: pointer; background: none; border: none; font-size: 16px; font-weight: 600; color: #6c757d; }
+        .tab.active { color: #2575fc; border-bottom: 3px solid #2575fc; }
+        .tab-content { display: none; padding: 25px; }
+        .tab-content.active { display: block; }
+        .question-text { font-size: 18px; line-height: 1.8; margin-bottom: 25px; background: #f8f9fa; padding: 20px; border-radius: 10px; border-left: 4px solid #2575fc; }
+        .options { display: grid; gap: 12px; margin-bottom: 30px; }
+        .option { background: white; border: 2px solid #dee2e6; border-radius: 10px; padding: 15px; cursor: pointer; transition: all 0.3s ease; display: flex; align-items: center; }
+        .option:hover { border-color: #adb5bd; }
+        .option.selected { border-color: #2575fc; background: #e7f1ff; }
+        .option.correct { border-color: #28a745; background: #d4edda; }
+        .option.wrong { border-color: #dc3545; background: #f8d7da; }
+        .option-text { flex: 1; }
+        .explanation { margin-top: 25px; padding: 20px; background: #e7f1ff; border-radius: 10px; border-left: 4px solid #2575fc; display: none; }
+        .explanation.show { display: block; }
+        .controls { display: flex; justify-content: space-between; padding: 20px; background: #f8f9fa; border-top: 1px solid #e9ecef; }
+        button { padding: 12px 24px; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; transition: all 0.3s ease; }
+        .btn-primary { background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%); color: white; }
+        .btn-primary:hover { opacity: 0.9; }
+        .btn-secondary { background: #6c757d; color: white; }
+        .btn-secondary:hover { background: #5a6268; }
+        .import-section { padding: 20px; }
+        #file-input { margin: 15px 0; padding: 10px; border: 2px dashed #6c757d; border-radius: 8px; width: 100%; }
+        #import-status { margin-top: 15px; padding: 10px; border-radius: 5px; }
+        .stats-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-top: 15px; }
+        .stat-box { background: #f8f9fa; padding: 15px; border-radius: 8px; text-align: center; }
+        
+        /* 新增：分享码区域样式 */
+        .sync-section { margin-top: 30px; padding: 20px; background: #f8f9fa; border-radius: 10px; border: 2px solid #e9ecef; }
+        .sync-section h4 { margin-bottom: 15px; color: #495057; }
+        .code-textarea { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #dee2e6; font-family: monospace; resize: vertical; margin: 10px 0; font-size: 14px; }
+        .btn-small { padding: 8px 16px; font-size: 14px; }
+        .btn-success { background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white; }
+        .btn-info { background: linear-gradient(135deg, #17a2b8 0%, #20c997 100%); color: white; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📚 JTEST刷题系统 - 测试版</h1>
+            <p>支持刷题、题库导入、学习统计和跨设备同步</p>
+        </div>
+        
+        <div class="tab-container">
+            <button class="tab active" onclick="switchTab('practice')">刷题模式</button>
+            <button class="tab" onclick="switchTab('import')">导入题库</button>
+            <button class="tab" onclick="switchTab('stats')">学习统计</button>
+        </div>
+
+        <!-- 刷题模式标签页 -->
+        <div id="practice-tab" class="tab-content active">
+            <div class="question-container">
+                <div class="question-type" id="question-type">语法</div>
+                <div class="question-text" id="question-text">题目加载中...</div>
+                <div class="options" id="options-container"></div>
+                <div class="explanation" id="explanation">
+                    <strong>答案解析：</strong><br>
+                    <span id="explanation-text"></span>
+                </div>
+            </div>
+            <div class="controls">
+                <button id="prev-btn" class="btn-secondary">上一题</button>
+                <button id="submit-btn" class="btn-primary">提交答案</button>
+                <button id="next-btn" class="btn-primary">下一题</button>
+            </div>
+        </div>
+
+        <!-- 导入题库标签页 -->
+        <div id="import-tab" class="tab-content">
+            <div class="import-section">
+                <h3>📁 导入完整题库</h3>
+                <p>请选择你的 <code>jtest_questions.json</code> 文件：</p>
+                <input type="file" id="file-input" accept=".json">
+                <p style="margin-top: 20px; color: #666; font-size: 0.9em;">
+                    <strong>格式要求：</strong>JSON数组格式，每道题包含 id, type, question, options, correct, explanation 字段。
+                </p>
+                <div id="import-status"></div>
+            </div>
+        </div>
+
+        <!-- 学习统计标签页 -->
+        <div id="stats-tab" class="tab-content">
+            <div class="import-section">
+                <h3>📊 学习统计</h3>
+                <div id="stats-content">加载中...</div>
+                
+                <!-- 新增：分享码同步功能 -->
+                <div class="sync-section">
+                    <h4>🔄 跨设备同步（分享码功能）</h4>
+                    <p style="color: #666; font-size: 0.95em; margin-bottom: 15px;">
+                        生成分享码，在另一台设备上恢复你的学习进度（包含题库和答题记录）。
+                    </p>
+                    
+                    <div style="margin-bottom: 20px;">
+                        <button onclick="generateShareCode()" class="btn-primary" style="margin-right: 10px;">生成分享码</button>
+                        <button onclick="generateShareUrl()" class="btn-info" style="margin-right: 10px;">生成分享链接</button>
+                        <button onclick="showRestoreSection()" class="btn-secondary">从分享码恢复</button>
+                    </div>
+                    
+                    <!-- 生成分享码区域 -->
+                    <div id="share-code-section" style="display: none; margin-top: 20px;">
+                        <p><strong>分享码：</strong></p>
+                        <textarea id="share-code-text" class="code-textarea" rows="3" readonly></textarea>
+                        <div style="margin-top: 10px;">
+                            <button onclick="copyShareCode()" class="btn-secondary btn-small">复制分享码</button>
+                            <button onclick="closeShareCode()" class="btn-secondary btn-small" style="margin-left: 10px;">关闭</button>
+                        </div>
+                        <p style="font-size: 0.85em; color: #6c757d; margin-top: 10px;">
+                            提示：此分享码包含所有题目和你的答题进度，请妥善保存。
+                        </p>
+                    </div>
+                    
+                    <!-- 恢复分享码区域 -->
+                    <div id="restore-section" style="display: none; margin-top: 20px;">
+                        <p><strong>粘贴分享码：</strong></p>
+                        <textarea id="restore-code-text" class="code-textarea" rows="3" placeholder="粘贴分享码到这里..."></textarea>
+                        <div style="margin-top: 10px;">
+                            <button onclick="restoreFromShareCode()" class="btn-primary btn-small">恢复数据</button>
+                            <button onclick="closeRestoreSection()" class="btn-secondary btn-small" style="margin-left: 10px;">取消</button>
+                        </div>
+                        <p style="font-size: 0.85em; color: #6c757d; margin-top: 10px;">
+                            注意：恢复将覆盖当前设备上的所有学习记录。
+                        </p>
+                    </div>
+                </div>
+                
+                <!-- 清空按钮 -->
+                <div style="margin-top: 20px;">
+                    <button onclick="clearProgress()" class="btn-secondary">清空学习记录</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ==================== 核心：仅2道测试题 ====================
+        let questions = [
+            {
+                "id": 1,
+                "type": "语法",
+                "question": "面接時間は１人（   ）10 分だ。",
+                "options": ["１ に沿って", "２ につき", "３ にかけては", "４ にわたって"],
+                "correct": "2", // 第二个选项是正确答案
+                "explanation": "「につき」表示单位、比率，意为'每...'。本题用于测试正确选项应显示绿色背景。"
+            },
+            {
+                "id": 2,
+                "type": "语法",
+                "question": "重要なことは同じ間違いを繰り返さない（   ）だ。",
+                "options": ["１ つもり", "２ ところ", "３ もの", "４ こと"],
+                "correct": "4", // 第四个选项是正确答案
+                "explanation": "「～ことだ」表示建议、忠告，意为'重要的是...'。"
+            }
+        ];
+
+        // ==================== 应用程序状态 ====================
+        let currentQuestionIndex = 0;
+        let selectedOption = null;
+        let userAnswers = {};
+        let wrongQuestions = new Set();
+
+        // ==================== 页面加载初始化 ====================
+        window.addEventListener('DOMContentLoaded', function() {
+            loadQuestion(currentQuestionIndex);
+            updateStatsDisplay();
+            document.getElementById('file-input').addEventListener('change', handleFileUpload);
+            document.getElementById('prev-btn').addEventListener('click', prevQuestion);
+            document.getElementById('next-btn').addEventListener('click', nextQuestion);
+            document.getElementById('submit-btn').addEventListener('click', submitAnswer);
+            loadProgress();
+            
+            // 检查URL中的分享码
+            checkUrlShareCode();
+        });
+
+        // ==================== 核心函数：加载题目 ====================
+        function loadQuestion(index) {
+            if (index < 0) index = 0;
+            if (index >= questions.length) index = questions.length - 1;
+            currentQuestionIndex = index;
+            selectedOption = null;
+
+            const q = questions[index];
+            document.getElementById('question-text').textContent = q.question;
+            document.getElementById('question-type').textContent = q.type;
+
+            const optionsContainer = document.getElementById('options-container');
+            optionsContainer.innerHTML = '';
+
+            q.options.forEach((optionText, i) => {
+                const optionDiv = document.createElement('div');
+                optionDiv.className = 'option';
+                optionDiv.dataset.index = i;
+
+                const text = document.createElement('div');
+                text.className = 'option-text';
+                text.textContent = optionText;
+                optionDiv.appendChild(text);
+
+                optionDiv.addEventListener('click', function() { selectOption(i); });
+
+                // ========== 判断并标记选项状态 ==========
+                if (userAnswers[index] !== undefined) {
+                    // 用户已提交本题答案
+                    const correctAnswerNum = parseInt(q.correct); // 正确答案的数字，如2
+
+                    // 1. 标记正确答案 (绿色)
+                    if ((i + 1) === correctAnswerNum) {
+                        optionDiv.classList.add('correct');
+                    }
+                    // 2. 标记用户选错的那个选项 (红色)
+                    if (userAnswers[index] === i && (i + 1) !== correctAnswerNum) {
+                        optionDiv.classList.add('wrong');
+                    }
+                    // 3. 标记用户选择的选项 (蓝色边框)
+                    if (userAnswers[index] === i) {
+                        optionDiv.classList.add('selected');
+                    }
+                }
+
+                optionsContainer.appendChild(optionDiv);
+            });
+
+            // 显示/隐藏解析
+            const explanationDiv = document.getElementById('explanation');
+            if (userAnswers[index] !== undefined) {
+                document.getElementById('explanation-text').textContent = q.explanation;
+                explanationDiv.classList.add('show');
+            } else {
+                explanationDiv.classList.remove('show');
+            }
+        }
+
+        function selectOption(index) {
+            if (userAnswers[currentQuestionIndex] !== undefined) return;
+            document.querySelectorAll('.option').forEach(opt => opt.classList.remove('selected'));
+            document.querySelector(`.option[data-index="${index}"]`).classList.add('selected');
+            selectedOption = index;
+        }
+
+        function submitAnswer() {
+            if (selectedOption === null && userAnswers[currentQuestionIndex] === undefined) {
+                alert('请先选择一个答案！');
+                return;
+            }
+
+            if (userAnswers[currentQuestionIndex] === undefined) {
+                // 首次提交本题答案
+                userAnswers[currentQuestionIndex] = selectedOption;
+                const q = questions[currentQuestionIndex];
+                const correctAnswerNum = parseInt(q.correct);
+
+                // 判断是否答错
+                if ((selectedOption + 1) !== correctAnswerNum) {
+                    // 答错了，加入错题集
+                    wrongQuestions.add(currentQuestionIndex);
+                }
+
+                saveProgress();
+                updateStatsDisplay();
+                loadQuestion(currentQuestionIndex); // 重新加载以更新选项颜色
+            }
+        }
+
+        function prevQuestion() { loadQuestion(currentQuestionIndex - 1); }
+        function nextQuestion() { loadQuestion(currentQuestionIndex + 1); }
+
+        // ==================== 本地文件导入功能 ====================
+        function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (!file || !file.name.endsWith('.json')) {
+                alert('请选择有效的JSON文件');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const newQuestions = JSON.parse(e.target.result);
+                    if (Array.isArray(newQuestions) && newQuestions.length > 0) {
+                        // 验证题库格式是否有correct字段
+                        const sampleQ = newQuestions[0];
+                        if (!sampleQ.hasOwnProperty('correct')) {
+                            throw new Error('题库格式错误：缺少"correct"字段');
+                        }
+
+                        // 替换题库，重置状态
+                        questions = newQuestions;
+                        currentQuestionIndex = 0;
+                        userAnswers = {};
+                        wrongQuestions.clear();
+                        saveProgress();
+                        loadQuestion(0);
+                        updateStatsDisplay();
+
+                        document.getElementById('import-status').innerHTML = '<div style="color:green; background:#d4edda; padding:10px; border-radius:5px;">✅ 成功导入 ' + newQuestions.length + ' 道题目！已跳转到第一题。</div>';
+                        setTimeout(() => switchTab('practice'), 800);
+                    } else {
+                        throw new Error('JSON格式不正确：应为题目数组');
+                    }
+                } catch (error) {
+                    document.getElementById('import-status').innerHTML = '<div style="color:#721c24; background:#f8d7da; padding:10px; border-radius:5px;">❌ 导入失败：' + error.message + '</div>';
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        // ==================== 标签页切换 ====================
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            document.querySelector(`button[onclick="switchTab('${tabName}')"]`).classList.add('active');
+            document.getElementById(`${tabName}-tab`).classList.add('active');
+            if (tabName === 'stats') updateStatsDisplay();
+        }
+
+        // ==================== 进度保存与加载 ====================
+        function saveProgress() {
+            localStorage.setItem('jtest_questions', JSON.stringify(questions));
+            localStorage.setItem('jtest_answers', JSON.stringify(userAnswers));
+            localStorage.setItem('jtest_wrong', JSON.stringify([...wrongQuestions]));
+        }
+
+        function loadProgress() {
+            const savedQuestions = localStorage.getItem('jtest_questions');
+            if (savedQuestions) questions = JSON.parse(savedQuestions);
+            const savedAnswers = localStorage.getItem('jtest_answers');
+            if (savedAnswers) userAnswers = JSON.parse(savedAnswers);
+            const savedWrong = localStorage.getItem('jtest_wrong');
+            if (savedWrong) wrongQuestions = new Set(JSON.parse(savedWrong));
+        }
+
+        // ==================== 学习统计 ====================
+        function updateStatsDisplay() {
+            const total = questions.length;
+            const answered = Object.keys(userAnswers).length;
+
+            // 计算答对题数
+            const correctCount = Object.keys(userAnswers).filter(idx => {
+                const q = questions[idx];
+                const userAnswerIndex = userAnswers[idx];
+                const correctAnswerNum = parseInt(q.correct);
+                // 用户答案索引+1后与正确答案数字比较
+                return (userAnswerIndex + 1) === correctAnswerNum;
+            }).length;
+
+            const wrongCount = wrongQuestions.size;
+            const rate = answered > 0 ? Math.round(correctCount / answered * 100) : 0;
+
+            const statsHTML = `
+                <div class="stats-grid">
+                    <div class="stat-box"><strong>${total}</strong><br>总题数</div>
+                    <div class="stat-box"><strong>${answered}</strong><br>已答题</div>
+                    <div class="stat-box"><strong>${correctCount}</strong><br>答对数</div>
+                    <div class="stat-box"><strong>${wrongCount}</strong><br>错题数</div>
+                </div>
+                <p style="margin-top: 15px; font-size: 1.2em;">正确率：<strong>${rate}%</strong></p>
+                <p style="margin-top: 10px; color: #666; font-size: 0.9em;">*统计基于当前${total}道题</p>
+            `;
+            document.getElementById('stats-content').innerHTML = statsHTML;
+        }
+
+        function clearProgress() {
+            if (confirm('确定要清空所有学习记录吗？此操作不可撤销。')) {
+                localStorage.removeItem('jtest_answers');
+                localStorage.removeItem('jtest_wrong');
+                userAnswers = {};
+                wrongQuestions.clear();
+                loadQuestion(currentQuestionIndex);
+                updateStatsDisplay();
+                alert('学习记录已清空！');
+            }
+        }
+
+        // ==================== 分享码同步功能 ====================
+        // 显示分享码生成区域
+        function showShareCodeSection() {
+            document.getElementById('share-code-section').style.display = 'block';
+            document.getElementById('restore-section').style.display = 'none';
+        }
+
+        // 显示恢复区域
+        function showRestoreSection() {
+            document.getElementById('restore-section').style.display = 'block';
+            document.getElementById('share-code-section').style.display = 'none';
+        }
+
+        // 关闭分享码区域
+        function closeShareCode() {
+            document.getElementById('share-code-section').style.display = 'none';
+        }
+
+        // 关闭恢复区域
+        function closeRestoreSection() {
+            document.getElementById('restore-section').style.display = 'none';
+        }
+
+        // 生成分享码
+        function generateShareCode() {
+            try {
+                // 准备要分享的数据
+                const shareData = {
+                    questions: questions,
+                    userAnswers: userAnswers,
+                    wrongQuestions: [...wrongQuestions], // Set转换为数组
+                    version: "1.0",
+                    timestamp: new Date().toISOString(),
+                    totalQuestions: questions.length
+                };
+                
+                // 转换为JSON字符串
+                const jsonString = JSON.stringify(shareData);
+                
+                // 使用Base64编码（URL安全版本）
+                const base64String = btoa(encodeURIComponent(jsonString))
+                    .replace(/\+/g, '-')  // 替换+为-，使URL安全
+                    .replace(/\//g, '_')  // 替换/为_
+                    .replace(/=+$/, '');  // 移除末尾的=
+                
+                // 显示分享码
+                document.getElementById('share-code-text').value = base64String;
+                showShareCodeSection();
+                
+                console.log("分享码生成成功，长度:", base64String.length);
+                
+            } catch (error) {
+                alert('生成分享码失败: ' + error.message);
+            }
+        }
+
+        // 复制分享码
+        function copyShareCode() {
+            const textarea = document.getElementById('share-code-text');
+            textarea.select();
+            textarea.setSelectionRange(0, 99999); // 移动端支持
+            
+            try {
+                const successful = document.execCommand('copy');
+                if (successful) {
+                    alert('分享码已复制到剪贴板！');
+                } else {
+                    // 使用现代API
+                    navigator.clipboard.writeText(textarea.value)
+                        .then(() => alert('分享码已复制到剪贴板！'))
+                        .catch(() => alert('复制失败，请手动选择并复制。'));
+                }
+            } catch (err) {
+                // 备用方案
+                try {
+                    navigator.clipboard.writeText(textarea.value)
+                        .then(() => alert('分享码已复制到剪贴板！'))
+                        .catch(() => alert('复制失败，请手动选择并复制。'));
+                } catch (e) {
+                    alert('请手动选择并复制分享码。');
+                }
+            }
+        }
+
+        // 从分享码恢复
+        function restoreFromShareCode() {
+            const code = document.getElementById('restore-code-text').value.trim();
+            
+            if (!code) {
+                alert('请输入分享码');
+                return;
+            }
+            
+            if (!confirm('这将覆盖当前所有学习记录，确定继续吗？')) {
+                return;
+            }
+            
+            try {
+                // 还原Base64字符串
+                let base64String = code
+                    .replace(/-/g, '+')
+                    .replace(/_/g, '/');
+                
+                // 补全等号
+                while (base64String.length % 4) {
+                    base64String += '=';
+                }
+                
+                // 解码
+                const jsonString = decodeURIComponent(atob(base64String));
+                const shareData = JSON.parse(jsonString);
+                
+                // 验证数据
+                if (!shareData.questions || !Array.isArray(shareData.questions)) {
+                    throw new Error('分享码格式无效：缺少题目数据');
+                }
+                
+                // 恢复数据
+                questions = shareData.questions;
+                userAnswers = shareData.userAnswers || {};
+                wrongQuestions = new Set(shareData.wrongQuestions || []);
+                
+                // 保存到本地存储
+                saveProgress();
+                
+                // 重置到第一题
+                currentQuestionIndex = 0;
+                loadQuestion(currentQuestionIndex);
+                updateStatsDisplay();
+                
+                closeRestoreSection();
+                document.getElementById('restore-code-text').value = '';
+                
+                alert(`✅ 成功恢复数据！\n题库：${questions.length}题\n答题记录：${Object.keys(userAnswers).length}题`);
+                
+            } catch (error) {
+                alert('❌ 恢复失败：' + error.message + '\n请检查分享码是否正确。');
+            }
+        }
+
+        // ==================== URL分享码支持 ====================
+        // 初始化时检查URL中的分享码
+        function checkUrlShareCode() {
+            const hash = window.location.hash.substring(1);
+            if (hash && hash.length > 10) { // 简单判断可能是分享码
+                if (confirm('检测到URL中的分享码，是否恢复数据？')) {
+                    document.getElementById('restore-code-text').value = hash;
+                    setTimeout(() => {
+                        restoreFromShareCode();
+                    }, 100);
+                }
+            }
+        }
+
+        // 生成包含分享码的URL
+        function generateShareUrl() {
+            generateShareCode();
+            const code = document.getElementById('share-code-text').value;
+            const url = window.location.origin + window.location.pathname + '#' + code;
+            
+            // 创建临时文本区域来复制URL
+            const tempTextArea = document.createElement('textarea');
+            tempTextArea.value = url;
+            document.body.appendChild(tempTextArea);
+            tempTextArea.select();
+            
+            try {
+                const successful = document.execCommand('copy');
+                if (successful) {
+                    alert('✅ 分享链接已复制到剪贴板！\n\n发送此链接即可分享完整学习状态。\n\n链接长度：' + url.length + '字符');
+                } else {
+                    navigator.clipboard.writeText(url)
+                        .then(() => {
+                            alert('✅ 分享链接已复制到剪贴板！\n\n发送此链接即可分享完整学习状态。\n\n链接长度：' + url.length + '字符');
+                        })
+                        .catch(() => {
+                            alert('分享链接已生成：\n' + url + '\n\n请手动复制此链接分享给他人。');
+                        });
+                }
+            } catch (err) {
+                navigator.clipboard.writeText(url)
+                    .then(() => {
+                        alert('✅ 分享链接已复制到剪贴板！\n\n发送此链接即可分享完整学习状态。\n\n链接长度：' + url.length + '字符');
+                    })
+                    .catch(() => {
+                        alert('分享链接已生成：\n' + url + '\n\n请手动复制此链接分享给他人。');
+                    });
+            } finally {
+                document.body.removeChild(tempTextArea);
+            }
+        }
+    </script>
+</body>
+</html>
