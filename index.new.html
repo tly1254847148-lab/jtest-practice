@@ -21,6 +21,7 @@
         .option.selected { border-color: #2575fc; background: #e7f1ff; }
         .option.correct { border-color: #28a745; background: #d4edda; }
         .option.wrong { border-color: #dc3545; background: #f8d7da; }
+        .option.disabled { pointer-events: none; opacity: 0.7; }
         .option-text { flex: 1; }
         .explanation { margin-top: 25px; padding: 20px; background: #e7f1ff; border-radius: 10px; border-left: 4px solid #2575fc; display: none; }
         .explanation.show { display: block; }
@@ -36,13 +37,21 @@
         .stats-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-top: 15px; }
         .stat-box { background: #f8f9fa; padding: 15px; border-radius: 8px; text-align: center; }
         
-        /* 新增：分享码区域样式 */
+        /* 分享码区域样式 */
         .sync-section { margin-top: 30px; padding: 20px; background: #f8f9fa; border-radius: 10px; border: 2px solid #e9ecef; }
         .sync-section h4 { margin-bottom: 15px; color: #495057; }
         .code-textarea { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #dee2e6; font-family: monospace; resize: vertical; margin: 10px 0; font-size: 14px; }
         .btn-small { padding: 8px 16px; font-size: 14px; }
         .btn-success { background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white; }
         .btn-info { background: linear-gradient(135deg, #17a2b8 0%, #20c997 100%); color: white; }
+        .btn-warning { background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%); color: white; }
+        
+        /* 状态提示 */
+        .status-message { padding: 10px; border-radius: 5px; margin: 10px 0; }
+        .status-success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .status-error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .status-info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+        .status-warning { background: #fff3cd; color: #856404; border: 1px solid #ffeaa7; }
     </style>
 </head>
 <body>
@@ -61,7 +70,10 @@
         <!-- 刷题模式标签页 -->
         <div id="practice-tab" class="tab-content active">
             <div class="question-container">
-                <div class="question-type" id="question-type">语法</div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <div class="question-type" id="question-type">语法</div>
+                    <div id="question-progress" style="color: #6c757d; font-size: 0.9em;">1/2</div>
+                </div>
                 <div class="question-text" id="question-text">题目加载中...</div>
                 <div class="options" id="options-container"></div>
                 <div class="explanation" id="explanation">
@@ -95,12 +107,14 @@
                 <h3>📊 学习统计</h3>
                 <div id="stats-content">加载中...</div>
                 
-                <!-- 新增：分享码同步功能 -->
+                <!-- 分享码同步功能 -->
                 <div class="sync-section">
                     <h4>🔄 跨设备同步（分享码功能）</h4>
                     <p style="color: #666; font-size: 0.95em; margin-bottom: 15px;">
-                        生成分享码，在另一台设备上恢复你的学习进度（包含题库和答题记录）。
+                        生成压缩分享码，在另一台设备上恢复你的学习进度。
                     </p>
+                    
+                    <div id="compression-info" class="status-info" style="display: none;"></div>
                     
                     <div style="margin-bottom: 20px;">
                         <button onclick="generateShareCode()" class="btn-primary" style="margin-right: 10px;">生成分享码</button>
@@ -110,14 +124,15 @@
                     
                     <!-- 生成分享码区域 -->
                     <div id="share-code-section" style="display: none; margin-top: 20px;">
-                        <p><strong>分享码：</strong></p>
+                        <p><strong>压缩分享码：</strong> <span id="compression-rate" style="font-size: 0.85em; color: #28a745;"></span></p>
                         <textarea id="share-code-text" class="code-textarea" rows="3" readonly></textarea>
                         <div style="margin-top: 10px;">
                             <button onclick="copyShareCode()" class="btn-secondary btn-small">复制分享码</button>
+                            <button onclick="generateQRCode()" class="btn-warning btn-small" style="margin-left: 10px;">生成二维码</button>
                             <button onclick="closeShareCode()" class="btn-secondary btn-small" style="margin-left: 10px;">关闭</button>
                         </div>
                         <p style="font-size: 0.85em; color: #6c757d; margin-top: 10px;">
-                            提示：此分享码包含所有题目和你的答题进度，请妥善保存。
+                            提示：此分享码已压缩，包含所有题目和答题进度。
                         </p>
                     </div>
                     
@@ -133,6 +148,12 @@
                             注意：恢复将覆盖当前设备上的所有学习记录。
                         </p>
                     </div>
+                    
+                    <!-- 二维码显示区域 -->
+                    <div id="qrcode-section" style="display: none; margin-top: 20px; text-align: center;">
+                        <div id="qrcode"></div>
+                        <button onclick="closeQRCode()" class="btn-secondary btn-small" style="margin-top: 10px;">关闭二维码</button>
+                    </div>
                 </div>
                 
                 <!-- 清空按钮 -->
@@ -144,6 +165,416 @@
     </div>
 
     <script>
+        // ==================== 内联的lz-string压缩库（无需外部依赖） ====================
+        // 这是lz-string库的精简版本，只包含我们需要的功能
+        var LZString = (function() {
+            var f = String.fromCharCode;
+            var keyStrBase64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=";
+            var baseReverseDic = {};
+            
+            function getBaseValue(alphabet, character) {
+                if (!baseReverseDic[alphabet]) {
+                    baseReverseDic[alphabet] = {};
+                    for (var i = 0; i < alphabet.length; i++) {
+                        baseReverseDic[alphabet][alphabet.charAt(i)] = i;
+                    }
+                }
+                return baseReverseDic[alphabet][character];
+            }
+            
+            var LZString = {
+                compressToBase64: function(input) {
+                    if (input == null) return "";
+                    var res = LZString._compress(input, 6, function(a) { return keyStrBase64.charAt(a); });
+                    switch (res.length % 4) {
+                        case 0: return res;
+                        case 1: return res + "===";
+                        case 2: return res + "==";
+                        case 3: return res + "=";
+                    }
+                    return res;
+                },
+                
+                decompressFromBase64: function(input) {
+                    if (input == null) return "";
+                    if (input == "") return null;
+                    return LZString._decompress(input.length, 32, function(index) { 
+                        return getBaseValue(keyStrBase64, input.charAt(index)); 
+                    });
+                },
+                
+                _compress: function(uncompressed, bitsPerChar, getCharFromInt) {
+                    if (uncompressed == null) return "";
+                    var i, value,
+                        context_dictionary = {},
+                        context_dictionaryToCreate = {},
+                        context_c = "",
+                        context_wc = "",
+                        context_w = "",
+                        context_enlargeIn = 2,
+                        context_dictSize = 3,
+                        context_numBits = 2,
+                        context_data = [],
+                        context_data_val = 0,
+                        context_data_position = 0,
+                        ii;
+                    
+                    for (ii = 0; ii < uncompressed.length; ii += 1) {
+                        context_c = uncompressed.charAt(ii);
+                        if (!Object.prototype.hasOwnProperty.call(context_dictionary, context_c)) {
+                            context_dictionary[context_c] = context_dictSize++;
+                            context_dictionaryToCreate[context_c] = true;
+                        }
+                        
+                        context_wc = context_w + context_c;
+                        if (Object.prototype.hasOwnProperty.call(context_dictionary, context_wc)) {
+                            context_w = context_wc;
+                        } else {
+                            if (Object.prototype.hasOwnProperty.call(context_dictionaryToCreate, context_w)) {
+                                if (context_w.charCodeAt(0) < 256) {
+                                    for (i = 0; i < context_numBits; i++) {
+                                        context_data_val = (context_data_val << 1);
+                                        if (context_data_position == bitsPerChar - 1) {
+                                            context_data_position = 0;
+                                            context_data.push(getCharFromInt(context_data_val));
+                                            context_data_val = 0;
+                                        } else {
+                                            context_data_position++;
+                                        }
+                                    }
+                                    value = context_w.charCodeAt(0);
+                                    for (i = 0; i < 8; i++) {
+                                        context_data_val = (context_data_val << 1) | (value & 1);
+                                        if (context_data_position == bitsPerChar - 1) {
+                                            context_data_position = 0;
+                                            context_data.push(getCharFromInt(context_data_val));
+                                            context_data_val = 0;
+                                        } else {
+                                            context_data_position++;
+                                        }
+                                        value = value >> 1;
+                                    }
+                                } else {
+                                    value = 1;
+                                    for (i = 0; i < context_numBits; i++) {
+                                        context_data_val = (context_data_val << 1) | value;
+                                        if (context_data_position == bitsPerChar - 1) {
+                                            context_data_position = 0;
+                                            context_data.push(getCharFromInt(context_data_val));
+                                            context_data_val = 0;
+                                        } else {
+                                            context_data_position++;
+                                        }
+                                        value = 0;
+                                    }
+                                    value = context_w.charCodeAt(0);
+                                    for (i = 0; i < 16; i++) {
+                                        context_data_val = (context_data_val << 1) | (value & 1);
+                                        if (context_data_position == bitsPerChar - 1) {
+                                            context_data_position = 0;
+                                            context_data.push(getCharFromInt(context_data_val));
+                                            context_data_val = 0;
+                                        } else {
+                                            context_data_position++;
+                                        }
+                                        value = value >> 1;
+                                    }
+                                }
+                                context_enlargeIn--;
+                                if (context_enlargeIn == 0) {
+                                    context_enlargeIn = Math.pow(2, context_numBits);
+                                    context_numBits++;
+                                }
+                                delete context_dictionaryToCreate[context_w];
+                            } else {
+                                value = context_dictionary[context_w];
+                                for (i = 0; i < context_numBits; i++) {
+                                    context_data_val = (context_data_val << 1) | (value & 1);
+                                    if (context_data_position == bitsPerChar - 1) {
+                                        context_data_position = 0;
+                                        context_data.push(getCharFromInt(context_data_val));
+                                        context_data_val = 0;
+                                    } else {
+                                        context_data_position++;
+                                    }
+                                    value = value >> 1;
+                                }
+                            }
+                            context_enlargeIn--;
+                            if (context_enlargeIn == 0) {
+                                context_enlargeIn = Math.pow(2, context_numBits);
+                                context_numBits++;
+                            }
+                            context_dictionary[context_wc] = context_dictSize++;
+                            context_w = String(context_c);
+                        }
+                    }
+                    
+                    if (context_w !== "") {
+                        if (Object.prototype.hasOwnProperty.call(context_dictionaryToCreate, context_w)) {
+                            if (context_w.charCodeAt(0) < 256) {
+                                for (i = 0; i < context_numBits; i++) {
+                                    context_data_val = (context_data_val << 1);
+                                    if (context_data_position == bitsPerChar - 1) {
+                                        context_data_position = 0;
+                                        context_data.push(getCharFromInt(context_data_val));
+                                        context_data_val = 0;
+                                    } else {
+                                        context_data_position++;
+                                    }
+                                }
+                                value = context_w.charCodeAt(0);
+                                for (i = 0; i < 8; i++) {
+                                    context_data_val = (context_data_val << 1) | (value & 1);
+                                    if (context_data_position == bitsPerChar - 1) {
+                                        context_data_position = 0;
+                                        context_data.push(getCharFromInt(context_data_val));
+                                        context_data_val = 0;
+                                    } else {
+                                        context_data_position++;
+                                    }
+                                    value = value >> 1;
+                                }
+                            } else {
+                                value = 1;
+                                for (i = 0; i < context_numBits; i++) {
+                                    context_data_val = (context_data_val << 1) | value;
+                                    if (context_data_position == bitsPerChar - 1) {
+                                        context_data_position = 0;
+                                        context_data.push(getCharFromInt(context_data_val));
+                                        context_data_val = 0;
+                                    } else {
+                                        context_data_position++;
+                                    }
+                                    value = 0;
+                                }
+                                value = context_w.charCodeAt(0);
+                                for (i = 0; i < 16; i++) {
+                                    context_data_val = (context_data_val << 1) | (value & 1);
+                                    if (context_data_position == bitsPerChar - 1) {
+                                        context_data_position = 0;
+                                        context_data.push(getCharFromInt(context_data_val));
+                                        context_data_val = 0;
+                                    } else {
+                                        context_data_position++;
+                                    }
+                                    value = value >> 1;
+                                }
+                            }
+                            context_enlargeIn--;
+                            if (context_enlargeIn == 0) {
+                                context_enlargeIn = Math.pow(2, context_numBits);
+                                context_numBits++;
+                            }
+                            delete context_dictionaryToCreate[context_w];
+                        } else {
+                            value = context_dictionary[context_w];
+                            for (i = 0; i < context_numBits; i++) {
+                                context_data_val = (context_data_val << 1) | (value & 1);
+                                if (context_data_position == bitsPerChar - 1) {
+                                    context_data_position = 0;
+                                    context_data.push(getCharFromInt(context_data_val));
+                                    context_data_val = 0;
+                                } else {
+                                    context_data_position++;
+                                }
+                                value = value >> 1;
+                            }
+                        }
+                        context_enlargeIn--;
+                        if (context_enlargeIn == 0) {
+                            context_enlargeIn = Math.pow(2, context_numBits);
+                            context_numBits++;
+                        }
+                    }
+                    
+                    value = 2;
+                    for (i = 0; i < context_numBits; i++) {
+                        context_data_val = (context_data_val << 1) | (value & 1);
+                        if (context_data_position == bitsPerChar - 1) {
+                            context_data_position = 0;
+                            context_data.push(getCharFromInt(context_data_val));
+                            context_data_val = 0;
+                        } else {
+                            context_data_position++;
+                        }
+                        value = value >> 1;
+                    }
+                    
+                    while (true) {
+                        context_data_val = (context_data_val << 1);
+                        if (context_data_position == bitsPerChar - 1) {
+                            context_data.push(getCharFromInt(context_data_val));
+                            break;
+                        } else context_data_position++;
+                    }
+                    return context_data.join('');
+                },
+                
+                _decompress: function(length, resetValue, getNextValue) {
+                    var dictionary = [],
+                        next,
+                        enlargeIn = 4,
+                        dictSize = 4,
+                        numBits = 3,
+                        entry = "",
+                        result = [],
+                        i,
+                        w,
+                        bits, resb, maxpower, power,
+                        c,
+                        data = {val:getNextValue(0), position:resetValue, index:1};
+                    
+                    for (i = 0; i < 3; i += 1) {
+                        dictionary[i] = i;
+                    }
+                    
+                    bits = 0;
+                    maxpower = Math.pow(2,2);
+                    power = 1;
+                    while (power != maxpower) {
+                        resb = data.val & data.position;
+                        data.position >>= 1;
+                        if (data.position == 0) {
+                            data.position = resetValue;
+                            data.val = getNextValue(data.index++);
+                        }
+                        bits |= (resb>0 ? 1 : 0) * power;
+                        power <<= 1;
+                    }
+                    
+                    switch (next = bits) {
+                        case 0:
+                            bits = 0;
+                            maxpower = Math.pow(2,8);
+                            power = 1;
+                            while (power != maxpower) {
+                                resb = data.val & data.position;
+                                data.position >>= 1;
+                                if (data.position == 0) {
+                                    data.position = resetValue;
+                                    data.val = getNextValue(data.index++);
+                                }
+                                bits |= (resb>0 ? 1 : 0) * power;
+                                power <<= 1;
+                            }
+                            c = f(bits);
+                            break;
+                        case 1:
+                            bits = 0;
+                            maxpower = Math.pow(2,16);
+                            power = 1;
+                            while (power != maxpower) {
+                                resb = data.val & data.position;
+                                data.position >>= 1;
+                                if (data.position == 0) {
+                                    data.position = resetValue;
+                                    data.val = getNextValue(data.index++);
+                                }
+                                bits |= (resb>0 ? 1 : 0) * power;
+                                power <<= 1;
+                            }
+                            c = f(bits);
+                            break;
+                        case 2:
+                            return "";
+                    }
+                    dictionary[3] = c;
+                    w = c;
+                    result.push(c);
+                    
+                    while (true) {
+                        if (data.index > length) {
+                            return "";
+                        }
+                        
+                        bits = 0;
+                        maxpower = Math.pow(2,numBits);
+                        power = 1;
+                        while (power != maxpower) {
+                            resb = data.val & data.position;
+                            data.position >>= 1;
+                            if (data.position == 0) {
+                                data.position = resetValue;
+                                data.val = getNextValue(data.index++);
+                            }
+                            bits |= (resb>0 ? 1 : 0) * power;
+                            power <<= 1;
+                        }
+                        
+                        switch (c = bits) {
+                            case 0:
+                                bits = 0;
+                                maxpower = Math.pow(2,8);
+                                power = 1;
+                                while (power != maxpower) {
+                                    resb = data.val & data.position;
+                                    data.position >>= 1;
+                                    if (data.position == 0) {
+                                        data.position = resetValue;
+                                        data.val = getNextValue(data.index++);
+                                    }
+                                    bits |= (resb>0 ? 1 : 0) * power;
+                                    power <<= 1;
+                                }
+                                
+                                dictionary[dictSize++] = f(bits);
+                                c = dictSize-1;
+                                enlargeIn--;
+                                break;
+                            case 1:
+                                bits = 0;
+                                maxpower = Math.pow(2,16);
+                                power = 1;
+                                while (power != maxpower) {
+                                    resb = data.val & data.position;
+                                    data.position >>= 1;
+                                    if (data.position == 0) {
+                                        data.position = resetValue;
+                                        data.val = getNextValue(data.index++);
+                                    }
+                                    bits |= (resb>0 ? 1 : 0) * power;
+                                    power <<= 1;
+                                }
+                                dictionary[dictSize++] = f(bits);
+                                c = dictSize-1;
+                                enlargeIn--;
+                                break;
+                            case 2:
+                                return result.join('');
+                        }
+                        
+                        if (enlargeIn == 0) {
+                            enlargeIn = Math.pow(2, numBits);
+                            numBits++;
+                        }
+                        
+                        if (dictionary[c]) {
+                            entry = dictionary[c];
+                        } else {
+                            if (c === dictSize) {
+                                entry = w + w.charAt(0);
+                            } else {
+                                return null;
+                            }
+                        }
+                        result.push(entry);
+                        
+                        dictionary[dictSize++] = w + entry.charAt(0);
+                        enlargeIn--;
+                        
+                        w = entry;
+                        
+                        if (enlargeIn == 0) {
+                            enlargeIn = Math.pow(2, numBits);
+                            numBits++;
+                        }
+                    }
+                }
+            };
+            return LZString;
+        })();
+
         // ==================== 核心：仅2道测试题 ====================
         let questions = [
             {
@@ -151,7 +582,7 @@
                 "type": "语法",
                 "question": "面接時間は１人（   ）10 分だ。",
                 "options": ["１ に沿って", "２ につき", "３ にかけては", "４ にわたって"],
-                "correct": "2", // 第二个选项是正确答案
+                "correct": "2",
                 "explanation": "「につき」表示单位、比率，意为'每...'。本题用于测试正确选项应显示绿色背景。"
             },
             {
@@ -159,7 +590,7 @@
                 "type": "语法",
                 "question": "重要なことは同じ間違いを繰り返さない（   ）だ。",
                 "options": ["１ つもり", "２ ところ", "３ もの", "４ こと"],
-                "correct": "4", // 第四个选项是正确答案
+                "correct": "4",
                 "explanation": "「～ことだ」表示建议、忠告，意为'重要的是...'。"
             }
         ];
@@ -194,38 +625,55 @@
             const q = questions[index];
             document.getElementById('question-text').textContent = q.question;
             document.getElementById('question-type').textContent = q.type;
+            
+            // 更新进度显示
+            document.getElementById('question-progress').textContent = 
+                `${index + 1}/${questions.length}`;
 
             const optionsContainer = document.getElementById('options-container');
             optionsContainer.innerHTML = '';
+
+            // 检查用户是否已经回答过此题
+            const hasAnswered = userAnswers[index] !== undefined;
 
             q.options.forEach((optionText, i) => {
                 const optionDiv = document.createElement('div');
                 optionDiv.className = 'option';
                 optionDiv.dataset.index = i;
 
+                // 如果已经回答过，禁用点击
+                if (hasAnswered) {
+                    optionDiv.classList.add('disabled');
+                }
+
                 const text = document.createElement('div');
                 text.className = 'option-text';
                 text.textContent = optionText;
                 optionDiv.appendChild(text);
 
-                optionDiv.addEventListener('click', function() { selectOption(i); });
+                // 添加点击事件
+                if (!hasAnswered) {
+                    optionDiv.addEventListener('click', function() { 
+                        selectOption(i); 
+                    });
+                }
 
-                // ========== 判断并标记选项状态 ==========
-                if (userAnswers[index] !== undefined) {
-                    // 用户已提交本题答案
-                    const correctAnswerNum = parseInt(q.correct); // 正确答案的数字，如2
-
-                    // 1. 标记正确答案 (绿色)
+                // 标记选项状态
+                if (hasAnswered) {
+                    const correctAnswerNum = parseInt(q.correct);
+                    
+                    // 标记正确答案（绿色）
                     if ((i + 1) === correctAnswerNum) {
                         optionDiv.classList.add('correct');
                     }
-                    // 2. 标记用户选错的那个选项 (红色)
-                    if (userAnswers[index] === i && (i + 1) !== correctAnswerNum) {
-                        optionDiv.classList.add('wrong');
-                    }
-                    // 3. 标记用户选择的选项 (蓝色边框)
+                    
+                    // 标记用户选择的选项
                     if (userAnswers[index] === i) {
                         optionDiv.classList.add('selected');
+                        // 如果用户选错了，标记为错误（红色）
+                        if ((i + 1) !== correctAnswerNum) {
+                            optionDiv.classList.add('wrong');
+                        }
                     }
                 }
 
@@ -234,47 +682,116 @@
 
             // 显示/隐藏解析
             const explanationDiv = document.getElementById('explanation');
-            if (userAnswers[index] !== undefined) {
+            if (hasAnswered) {
                 document.getElementById('explanation-text').textContent = q.explanation;
                 explanationDiv.classList.add('show');
             } else {
                 explanationDiv.classList.remove('show');
             }
+            
+            // 更新按钮状态
+            updateButtonStates();
         }
 
         function selectOption(index) {
+            // 如果已经回答过，不允许再次选择
             if (userAnswers[currentQuestionIndex] !== undefined) return;
-            document.querySelectorAll('.option').forEach(opt => opt.classList.remove('selected'));
-            document.querySelector(`.option[data-index="${index}"]`).classList.add('selected');
-            selectedOption = index;
+            
+            // 移除之前的选择
+            document.querySelectorAll('.option').forEach(opt => {
+                opt.classList.remove('selected');
+            });
+            
+            // 标记新的选择
+            const selectedElement = document.querySelector(`.option[data-index="${index}"]`);
+            if (selectedElement) {
+                selectedElement.classList.add('selected');
+                selectedOption = index;
+            }
+            
+            // 更新提交按钮状态
+            updateButtonStates();
         }
 
         function submitAnswer() {
+            // 如果没有选择答案且还没有回答过，提示用户
             if (selectedOption === null && userAnswers[currentQuestionIndex] === undefined) {
                 alert('请先选择一个答案！');
                 return;
             }
 
-            if (userAnswers[currentQuestionIndex] === undefined) {
-                // 首次提交本题答案
-                userAnswers[currentQuestionIndex] = selectedOption;
-                const q = questions[currentQuestionIndex];
-                const correctAnswerNum = parseInt(q.correct);
-
-                // 判断是否答错
-                if ((selectedOption + 1) !== correctAnswerNum) {
-                    // 答错了，加入错题集
-                    wrongQuestions.add(currentQuestionIndex);
-                }
-
-                saveProgress();
-                updateStatsDisplay();
-                loadQuestion(currentQuestionIndex); // 重新加载以更新选项颜色
+            // 如果已经回答过，直接显示解析
+            if (userAnswers[currentQuestionIndex] !== undefined) {
+                // 如果已经回答过，重新加载题目显示解析
+                loadQuestion(currentQuestionIndex);
+                return;
             }
+
+            // 首次提交本题答案
+            userAnswers[currentQuestionIndex] = selectedOption;
+            const q = questions[currentQuestionIndex];
+            const correctAnswerNum = parseInt(q.correct);
+
+            // 判断是否答错
+            if ((selectedOption + 1) !== correctAnswerNum) {
+                wrongQuestions.add(currentQuestionIndex);
+            }
+
+            saveProgress();
+            updateStatsDisplay();
+            loadQuestion(currentQuestionIndex); // 重新加载以更新选项颜色
         }
 
-        function prevQuestion() { loadQuestion(currentQuestionIndex - 1); }
-        function nextQuestion() { loadQuestion(currentQuestionIndex + 1); }
+        function prevQuestion() { 
+            loadQuestion(currentQuestionIndex - 1); 
+        }
+        
+        function nextQuestion() { 
+            loadQuestion(currentQuestionIndex + 1); 
+        }
+        
+        function updateButtonStates() {
+            const prevBtn = document.getElementById('prev-btn');
+            const nextBtn = document.getElementById('next-btn');
+            const submitBtn = document.getElementById('submit-btn');
+            
+            // 上一题按钮
+            prevBtn.disabled = currentQuestionIndex === 0;
+            if (prevBtn.disabled) {
+                prevBtn.style.opacity = "0.5";
+                prevBtn.style.cursor = "not-allowed";
+            } else {
+                prevBtn.style.opacity = "1";
+                prevBtn.style.cursor = "pointer";
+            }
+            
+            // 下一题按钮
+            nextBtn.disabled = currentQuestionIndex === questions.length - 1;
+            if (nextBtn.disabled) {
+                nextBtn.style.opacity = "0.5";
+                nextBtn.style.cursor = "not-allowed";
+            } else {
+                nextBtn.style.opacity = "1";
+                nextBtn.style.cursor = "pointer";
+            }
+            
+            // 提交按钮文本
+            if (userAnswers[currentQuestionIndex] !== undefined) {
+                submitBtn.textContent = '查看解析';
+                submitBtn.disabled = false;
+            } else {
+                submitBtn.textContent = '提交答案';
+                submitBtn.disabled = selectedOption === null;
+                
+                if (submitBtn.disabled) {
+                    submitBtn.style.opacity = "0.5";
+                    submitBtn.style.cursor = "not-allowed";
+                } else {
+                    submitBtn.style.opacity = "1";
+                    submitBtn.style.cursor = "pointer";
+                }
+            }
+        }
 
         // ==================== 本地文件导入功能 ====================
         function handleFileUpload(event) {
@@ -289,13 +806,11 @@
                 try {
                     const newQuestions = JSON.parse(e.target.result);
                     if (Array.isArray(newQuestions) && newQuestions.length > 0) {
-                        // 验证题库格式是否有correct字段
                         const sampleQ = newQuestions[0];
                         if (!sampleQ.hasOwnProperty('correct')) {
                             throw new Error('题库格式错误：缺少"correct"字段');
                         }
 
-                        // 替换题库，重置状态
                         questions = newQuestions;
                         currentQuestionIndex = 0;
                         userAnswers = {};
@@ -304,13 +819,15 @@
                         loadQuestion(0);
                         updateStatsDisplay();
 
-                        document.getElementById('import-status').innerHTML = '<div style="color:green; background:#d4edda; padding:10px; border-radius:5px;">✅ 成功导入 ' + newQuestions.length + ' 道题目！已跳转到第一题。</div>';
+                        document.getElementById('import-status').innerHTML = 
+                            '<div class="status-success">✅ 成功导入 ' + newQuestions.length + ' 道题目！已跳转到第一题。</div>';
                         setTimeout(() => switchTab('practice'), 800);
                     } else {
                         throw new Error('JSON格式不正确：应为题目数组');
                     }
                 } catch (error) {
-                    document.getElementById('import-status').innerHTML = '<div style="color:#721c24; background:#f8d7da; padding:10px; border-radius:5px;">❌ 导入失败：' + error.message + '</div>';
+                    document.getElementById('import-status').innerHTML = 
+                        '<div class="status-error">❌ 导入失败：' + error.message + '</div>';
                 }
             };
             reader.readAsText(file);
@@ -320,7 +837,10 @@
         function switchTab(tabName) {
             document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
             document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-            document.querySelector(`button[onclick="switchTab('${tabName}')"]`).classList.add('active');
+            
+            const tabBtn = document.querySelector(`button[onclick="switchTab('${tabName}')"]`);
+            if (tabBtn) tabBtn.classList.add('active');
+            
             document.getElementById(`${tabName}-tab`).classList.add('active');
             if (tabName === 'stats') updateStatsDisplay();
         }
@@ -351,7 +871,6 @@
                 const q = questions[idx];
                 const userAnswerIndex = userAnswers[idx];
                 const correctAnswerNum = parseInt(q.correct);
-                // 用户答案索引+1后与正确答案数字比较
                 return (userAnswerIndex + 1) === correctAnswerNum;
             }).length;
 
@@ -383,17 +902,32 @@
             }
         }
 
-        // ==================== 分享码同步功能 ====================
+        // ==================== 分享码同步功能（优化版） ====================
+        // 检查lz-string库是否加载
+        function checkLZString() {
+            if (typeof LZString === 'undefined') {
+                document.getElementById('compression-info').innerHTML = 
+                    '<div class="status-warning">⚠️ 压缩库加载失败，将使用普通编码（分享码会较长）</div>';
+                document.getElementById('compression-info').style.display = 'block';
+                return false;
+            }
+            return true;
+        }
+
         // 显示分享码生成区域
         function showShareCodeSection() {
             document.getElementById('share-code-section').style.display = 'block';
             document.getElementById('restore-section').style.display = 'none';
+            document.getElementById('qrcode-section').style.display = 'none';
+            document.getElementById('compression-info').style.display = 'none';
         }
 
         // 显示恢复区域
         function showRestoreSection() {
             document.getElementById('restore-section').style.display = 'block';
             document.getElementById('share-code-section').style.display = 'none';
+            document.getElementById('qrcode-section').style.display = 'none';
+            document.getElementById('compression-info').style.display = 'none';
         }
 
         // 关闭分享码区域
@@ -406,33 +940,62 @@
             document.getElementById('restore-section').style.display = 'none';
         }
 
-        // 生成分享码
+        // 生成分享码（使用压缩）
         function generateShareCode() {
             try {
+                // 检查压缩库
+                const useCompression = checkLZString();
+                
                 // 准备要分享的数据
                 const shareData = {
                     questions: questions,
                     userAnswers: userAnswers,
-                    wrongQuestions: [...wrongQuestions], // Set转换为数组
-                    version: "1.0",
+                    wrongQuestions: [...wrongQuestions],
+                    version: "2.0",
                     timestamp: new Date().toISOString(),
-                    totalQuestions: questions.length
+                    totalQuestions: questions.length,
+                    compressed: useCompression
                 };
                 
                 // 转换为JSON字符串
                 const jsonString = JSON.stringify(shareData);
                 
-                // 使用Base64编码（URL安全版本）
-                const base64String = btoa(encodeURIComponent(jsonString))
-                    .replace(/\+/g, '-')  // 替换+为-，使URL安全
-                    .replace(/\//g, '_')  // 替换/为_
-                    .replace(/=+$/, '');  // 移除末尾的=
+                let encodedString;
+                let originalLength = jsonString.length;
+                let compressedLength = 0;
+                
+                if (useCompression && typeof LZString !== 'undefined') {
+                    // 使用lz-string压缩
+                    encodedString = LZString.compressToBase64(jsonString)
+                        .replace(/\+/g, '-')
+                        .replace(/\//g, '_')
+                        .replace(/=+$/, '');
+                    compressedLength = encodedString.length;
+                } else {
+                    // 普通Base64编码
+                    encodedString = btoa(encodeURIComponent(jsonString))
+                        .replace(/\+/g, '-')
+                        .replace(/\//g, '_')
+                        .replace(/=+$/, '');
+                    compressedLength = encodedString.length;
+                }
                 
                 // 显示分享码
-                document.getElementById('share-code-text').value = base64String;
-                showShareCodeSection();
+                document.getElementById('share-code-text').value = encodedString;
                 
-                console.log("分享码生成成功，长度:", base64String.length);
+                // 显示压缩率
+                if (useCompression && typeof LZString !== 'undefined' && originalLength > 0) {
+                    const compressionRate = Math.round((1 - compressedLength / originalLength) * 100);
+                    const compressionText = compressionRate > 0 ? 
+                        `（压缩率：${compressionRate}%，长度：${compressedLength}字符）` :
+                        `（长度：${compressedLength}字符）`;
+                    document.getElementById('compression-rate').textContent = compressionText;
+                } else {
+                    document.getElementById('compression-rate').textContent = 
+                        `（长度：${compressedLength}字符）`;
+                }
+                
+                showShareCodeSection();
                 
             } catch (error) {
                 alert('生成分享码失败: ' + error.message);
@@ -443,27 +1006,23 @@
         function copyShareCode() {
             const textarea = document.getElementById('share-code-text');
             textarea.select();
-            textarea.setSelectionRange(0, 99999); // 移动端支持
             
             try {
-                const successful = document.execCommand('copy');
-                if (successful) {
-                    alert('分享码已复制到剪贴板！');
-                } else {
-                    // 使用现代API
+                if (navigator.clipboard && navigator.clipboard.writeText) {
                     navigator.clipboard.writeText(textarea.value)
-                        .then(() => alert('分享码已复制到剪贴板！'))
-                        .catch(() => alert('复制失败，请手动选择并复制。'));
+                        .then(() => alert('✅ 分享码已复制到剪贴板！'))
+                        .catch(() => {
+                            // 备用方案
+                            document.execCommand('copy');
+                            alert('✅ 分享码已复制到剪贴板！');
+                        });
+                } else {
+                    // 老浏览器
+                    document.execCommand('copy');
+                    alert('✅ 分享码已复制到剪贴板！');
                 }
             } catch (err) {
-                // 备用方案
-                try {
-                    navigator.clipboard.writeText(textarea.value)
-                        .then(() => alert('分享码已复制到剪贴板！'))
-                        .catch(() => alert('复制失败，请手动选择并复制。'));
-                } catch (e) {
-                    alert('请手动选择并复制分享码。');
-                }
+                alert('请手动选择并复制分享码。');
             }
         }
 
@@ -481,18 +1040,36 @@
             }
             
             try {
-                // 还原Base64字符串
-                let base64String = code
-                    .replace(/-/g, '+')
-                    .replace(/_/g, '/');
+                let jsonString;
+                let base64String = code.replace(/-/g, '+').replace(/_/g, '/');
                 
                 // 补全等号
                 while (base64String.length % 4) {
                     base64String += '=';
                 }
                 
-                // 解码
-                const jsonString = decodeURIComponent(atob(base64String));
+                // 尝试两种解码方式
+                try {
+                    // 先尝试lz-string解压
+                    if (typeof LZString !== 'undefined') {
+                        jsonString = LZString.decompressFromBase64(base64String);
+                        if (jsonString) {
+                            console.log("使用LZString解压成功");
+                        }
+                    }
+                } catch (e) {
+                    console.log("LZString解压失败，尝试普通解码");
+                }
+                
+                // 如果lz-string解压失败或不存在，使用普通解码
+                if (!jsonString) {
+                    try {
+                        jsonString = decodeURIComponent(atob(base64String));
+                    } catch (e) {
+                        throw new Error('分享码格式错误，无法解码');
+                    }
+                }
+                
                 const shareData = JSON.parse(jsonString);
                 
                 // 验证数据
@@ -527,13 +1104,16 @@
         // 初始化时检查URL中的分享码
         function checkUrlShareCode() {
             const hash = window.location.hash.substring(1);
-            if (hash && hash.length > 10) { // 简单判断可能是分享码
-                if (confirm('检测到URL中的分享码，是否恢复数据？')) {
-                    document.getElementById('restore-code-text').value = hash;
-                    setTimeout(() => {
-                        restoreFromShareCode();
-                    }, 100);
-                }
+            if (hash && hash.length > 10) {
+                setTimeout(() => {
+                    if (confirm('检测到URL中的分享码，是否恢复数据？')) {
+                        switchTab('stats');
+                        setTimeout(() => {
+                            document.getElementById('restore-code-text').value = hash;
+                            restoreFromShareCode();
+                        }, 300);
+                    }
+                }, 500);
             }
         }
 
@@ -550,29 +1130,62 @@
             tempTextArea.select();
             
             try {
-                const successful = document.execCommand('copy');
-                if (successful) {
-                    alert('✅ 分享链接已复制到剪贴板！\n\n发送此链接即可分享完整学习状态。\n\n链接长度：' + url.length + '字符');
-                } else {
+                if (navigator.clipboard && navigator.clipboard.writeText) {
                     navigator.clipboard.writeText(url)
                         .then(() => {
                             alert('✅ 分享链接已复制到剪贴板！\n\n发送此链接即可分享完整学习状态。\n\n链接长度：' + url.length + '字符');
                         })
                         .catch(() => {
-                            alert('分享链接已生成：\n' + url + '\n\n请手动复制此链接分享给他人。');
+                            document.execCommand('copy');
+                            alert('✅ 分享链接已复制到剪贴板！\n\n发送此链接即可分享完整学习状态。\n\n链接长度：' + url.length + '字符');
                         });
+                } else {
+                    document.execCommand('copy');
+                    alert('✅ 分享链接已复制到剪贴板！\n\n发送此链接即可分享完整学习状态。\n\n链接长度：' + url.length + '字符');
                 }
             } catch (err) {
-                navigator.clipboard.writeText(url)
-                    .then(() => {
-                        alert('✅ 分享链接已复制到剪贴板！\n\n发送此链接即可分享完整学习状态。\n\n链接长度：' + url.length + '字符');
-                    })
-                    .catch(() => {
-                        alert('分享链接已生成：\n' + url + '\n\n请手动复制此链接分享给他人。');
-                    });
+                alert('分享链接已生成：\n' + url + '\n\n请手动复制此链接分享给他人。');
             } finally {
                 document.body.removeChild(tempTextArea);
             }
+        }
+
+        // ==================== 二维码功能 ====================
+        function generateQRCode() {
+            const code = document.getElementById('share-code-text').value;
+            if (!code) {
+                alert('请先生成分享码');
+                return;
+            }
+            
+            const url = window.location.origin + window.location.pathname + '#' + code;
+            const qrcodeDiv = document.getElementById('qrcode');
+            qrcodeDiv.innerHTML = '';
+            
+            // 简单的二维码生成（使用文字提示）
+            qrcodeDiv.innerHTML = `
+                <div style="padding: 20px; background: white; border-radius: 10px; display: inline-block;">
+                    <div style="margin-bottom: 10px; font-weight: bold;">分享链接二维码：</div>
+                    <div style="color: #666; font-size: 0.9em; margin-bottom: 15px;">
+                        由于需要外部库，请使用以下链接生成二维码：<br>
+                        <a href="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(url)}" 
+                           target="_blank" style="color: #2575fc;">
+                           🔗 点击这里生成二维码
+                        </a>
+                    </div>
+                    <div style="font-size: 0.8em; color: #999;">
+                        或者直接复制链接发送：<br>
+                        <span style="word-break: break-all;">${url}</span>
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('qrcode-section').style.display = 'block';
+            document.getElementById('share-code-section').style.display = 'none';
+        }
+
+        function closeQRCode() {
+            document.getElementById('qrcode-section').style.display = 'none';
         }
     </script>
 </body>
