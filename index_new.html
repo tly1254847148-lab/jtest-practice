@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>JTEST刷题系统 - 增强版</title>
     <style>
-        /* 完整样式代码已整合在内 */
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Segoe UI', sans-serif; line-height: 1.6; color: #333; background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); min-height: 100vh; padding: 20px; }
         .container { max-width: 800px; margin: 0 auto; background: white; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); overflow: hidden; }
@@ -18,16 +17,25 @@
         .question-text { font-size: 18px; line-height: 1.8; margin-bottom: 25px; background: #f8f9fa; padding: 20px; border-radius: 10px; border-left: 4px solid #2575fc; }
         .options { display: grid; gap: 12px; margin-bottom: 30px; }
         .option { background: white; border: 2px solid #dee2e6; border-radius: 10px; padding: 15px; cursor: pointer; transition: all 0.3s ease; display: flex; align-items: center; }
+        .option:hover { border-color: #adb5bd; }
         .option.selected { border-color: #2575fc; background: #e7f1ff; }
         .option.correct { border-color: #28a745; background: #d4edda; }
         .option.wrong { border-color: #dc3545; background: #f8d7da; }
+        .option-label { display: flex; align-items: center; justify-content: center; width: 30px; height: 30px; background: #e9ecef; border-radius: 50%; margin-right: 15px; font-weight: bold; }
+        .option-text { flex: 1; }
+        .explanation { margin-top: 25px; padding: 20px; background: #e7f1ff; border-radius: 10px; border-left: 4px solid #2575fc; display: none; }
+        .explanation.show { display: block; }
         .controls { display: flex; justify-content: space-between; padding: 20px; background: #f8f9fa; border-top: 1px solid #e9ecef; }
         button { padding: 12px 24px; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; transition: all 0.3s ease; }
         .btn-primary { background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%); color: white; }
+        .btn-primary:hover { opacity: 0.9; }
         .btn-secondary { background: #6c757d; color: white; }
-        .import-section { padding: 20px; background: #f8f9fa; border-top: 1px solid #e9ecef; }
+        .btn-secondary:hover { background: #5a6268; }
+        .import-section { padding: 20px; }
         #file-input { margin: 15px 0; padding: 10px; border: 2px dashed #6c757d; border-radius: 8px; width: 100%; }
-        /* 更多样式已省略以节省篇幅，但以上核心样式已足够运行 */
+        #import-status { margin-top: 15px; padding: 10px; border-radius: 5px; }
+        .stats-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-top: 15px; }
+        .stat-box { background: #f8f9fa; padding: 15px; border-radius: 8px; text-align: center; }
     </style>
 </head>
 <body>
@@ -42,13 +50,15 @@
             <button class="tab" onclick="switchTab('stats')">学习统计</button>
         </div>
 
-        <!-- 刷题模式界面 -->
         <div id="practice-tab" class="tab-content active">
             <div class="question-container">
                 <div class="question-type" id="question-type">语法</div>
                 <div class="question-text" id="question-text">题目加载中...</div>
                 <div class="options" id="options-container"></div>
-                <div class="explanation" id="explanation"><strong>答案解析：</strong><br><span id="explanation-text"></span></div>
+                <div class="explanation" id="explanation">
+                    <strong>答案解析：</strong><br>
+                    <span id="explanation-text"></span>
+                </div>
             </div>
             <div class="controls">
                 <button id="prev-btn" class="btn-secondary">上一题</button>
@@ -57,24 +67,25 @@
             </div>
         </div>
 
-        <!-- 导入题库界面 -->
         <div id="import-tab" class="tab-content">
             <div class="import-section">
-                <h3>📁 导入新题库 (支持 .json 文件)</h3>
-                <p>选择你整理的JSON题库文件：</p>
+                <h3>📁 导入新题库</h3>
+                <p>选择你整理的JSON题库文件（将替换当前所有题目）：</p>
                 <input type="file" id="file-input" accept=".json">
                 <p style="margin-top: 20px; color: #666; font-size: 0.9em;">
-                    <strong>说明：</strong>导入的新题库将<b>完全替换</b>当前内置的42道题。你的答题进度会保留。
+                    <strong>提示：</strong>你也可以随时返回使用内置的42道默认题。
                 </p>
-                <div id="import-status" style="margin-top: 15px;"></div>
+                <div id="import-status"></div>
             </div>
         </div>
 
-        <!-- 统计界面 -->
         <div id="stats-tab" class="tab-content">
             <div class="import-section">
                 <h3>📊 学习统计</h3>
-                <div id="stats-content">暂无数据。</div>
+                <div id="stats-content">加载中...</div>
+                <div style="margin-top: 20px;">
+                    <button onclick="clearProgress()" class="btn-secondary">清空学习记录</button>
+                </div>
             </div>
         </div>
     </div>
@@ -82,84 +93,140 @@
     <script>
         // ==================== 核心：内置的42道初始题库 ====================
         let questions = [
-            {"id":1,"type":"语法","question":"面接時間は１人（   ）10 分だ。","options":["１ に沿って","２ につき","３ にかけては","４ にわたって"],"correct":"B","explanation":"「につき」表示单位、比率，意为'每...'。"},
-            {"id":2,"type":"语法","question":"重要なことは同じ間違いを繰り返さない（   ）だ。","options":["１ つもり","２ ところ","３ もの","４ こと"],"correct":"D","explanation":"「～ことだ」表示建议、忠告，意为'重要的是...'。"}
-            // 注：此处为节省篇幅，只列出2题示例。实际使用时，你需要将全部42题粘贴到这里。
-            // 你可以先将这个文件保存，然后联系我，我会提供完整的42题数据供你替换。
+{"id":1,"type":"语法","question":"面接時間は１人（   ）10 分だ。","options":["１ に沿って","２ につき","３ にかけては","４ にわたって"],"correct":"B","explanation":"「につき」表示单位、比率，意为'每...'。"},
+{"id":2,"type":"语法","question":"重要なことは同じ間違いを繰り返さない（   ）だ。","options":["１ つもり","２ ところ","３ もの","４ こと"],"correct":"D","explanation":"「～ことだ」表示建议、忠告，意为'重要的是...'。"},
+{"id":3,"type":"语法","question":"この製品の輸出量は（   ）つつある。","options":["１ 増え","２ 増える","３ 増えて","４ 増えた"],"correct":"A","explanation":"「～つつある」前接动词ます形，表示动作正在进行中。"},
+{"id":4,"type":"语法","question":"今の仕事はお客様に喜ばれるので、やり（   ）を感じる。","options":["１ がたさ","２ ぎみ","３ がい","４ 次第"],"correct":"C","explanation":"「やりがい」表示工作的价值、意义。"},
+{"id":5,"type":"语法","question":"行列に並んで（   ）して、手に入れたいとは思わない。","options":["１ から","２ と","３ も","４ まで"],"correct":"D","explanation":"「まで」表示极端程度，'甚至要...'。"},
+{"id":6,"type":"语法","question":"仕事が（   ）ものだから、長い間友達に連絡していない。","options":["１ 忙しくない","２ 忙しい","３ 忙しくて","４ 忙し"],"correct":"B","explanation":"「～ものだから」前接简体形，表示原因理由。"},
+{"id":7,"type":"语法","question":"上司に書類作成を頼まれ、（   ）ざるを得なくなった。","options":["１ 残業","２ 残業し","３ 残業せ","４ 残業する"],"correct":"C","explanation":"「～ざるを得ない」前接动词未然形（する→せざるを得ない）。"},
+{"id":8,"type":"语法","question":"剣を持った姿（   ）、まるで戦国時代の武士のようだ。","options":["１ といえども","２ かたがた","３ ならでは","４ たるや"],"correct":"D","explanation":"「～たるや」表示提起话题并进行评价。"},
+{"id":9,"type":"语法","question":"彼は結婚してからという（   ）、まっすぐ家に帰るようになった。","options":["１ もの","２ こと","３ わけ","４ うち"],"correct":"A","explanation":"「～からというもの」表示自从...以来。"},
+{"id":10,"type":"语法","question":"子供を学校に迎えに（   ）がてら買い物をした。","options":["１ 行こう","２ 行き","３ 行って","４ 行く"],"correct":"B","explanation":"「～がてら」前接动词ます形，表示顺便。"},
+{"id":11,"type":"语法","question":"昨日、今日（   ）海が荒れている。","options":["１ と","２ も","３ に","４ で"],"correct":"A","explanation":"「～と～と」表示列举，'...和...都...'。"},
+{"id":12,"type":"语法","question":"希望の大学に入学できるかどうか本人の努力（   ）。","options":["１ 極まりない","２ だにしない","３ いかんだ","４ にあたらない"],"correct":"C","explanation":"「～いかんだ」表示取决于..."},
+{"id":13,"type":"语法","question":"安月給でこんなに（   ）はかなわない。","options":["１ 働かされて","２ 働かされる","３ 働かされ","４ 働かされた"],"correct":"A","explanation":"「～てはかなわない」表示无法忍受..."},
+{"id":14,"type":"语法","question":"エアコンが壊れて、暑い（   ）なんのって。","options":["１ に","２ が","３ の","４ と"],"correct":"C","explanation":"「～のなんのって」表示非常...，强调程度。"},
+{"id":15,"type":"语法","question":"彼女とは結婚（   ）付き合っている。","options":["１ をおして","２ を経て","３ を前提に","４ をたよりに"],"correct":"C","explanation":"「～を前提に」表示以...为前提。"},
+{"id":16,"type":"语法","question":"高橋：「中村さん、中国語が話せるかな。」\n池田：「奥さんが中国人だからといって、（   ）。","options":["１ 話せるかのようだよ","２ 話せるおかげだよ","３ 話せるに違いないよ","４ 話せるとは限らないよ"],"correct":"D","explanation":"「～からといって～とは限らない」表示虽说...但未必..."},
+{"id":17,"type":"语法","question":"A：「登山、始めたんですって？」\nB：「いや、道具は（   ）、まだ一度も行けていないんだ」","options":["１ 揃えさえすれば","２ 揃えたことだし","３ 揃えたというより","４ 揃えたものの"],"correct":"D","explanation":"「～ものの」表示转折，'虽然...但是...'。"},
+{"id":18,"type":"语法","question":"吉岡：「今日の食事会、石井さんも参加するでしょうか」\n篠原：「（   ）、きっと来るよ。毎回参加しているんだから」","options":["１ 石井さんのことだから","２ 石井さんにしては","３ 石井さん次第で","４ 石井さんどころか"],"correct":"A","explanation":"「～のことだから」表示根据...的性格来推测。"},
+{"id":19,"type":"语法","question":"A：「事故で電車が止まっているみたいだよ」\nB：「困ったな。（   ）」","options":["１ 電車で帰るまでのことだな","２ 帰ろうにも帰れないな","３ 電車で帰らずともよいな","４ 帰ったら最後だな"],"correct":"B","explanation":"「～（よ）うにも～ない」表示即使想...也不能..."},
+{"id":20,"type":"语法","question":"上司：「午後から外出するので、何かあったら（   ）連絡してください」\n部下：「わかりました」","options":["１ 連絡することなしに","２ 電話なりメールなりで","３ メールにかまけて","４ 電話しようがしまいが"],"correct":"B","explanation":"「～なり～なり」表示列举，'...也好...也好'。"},
+{"id":21,"type":"词汇","question":"試合に負けて（   ）した。","options":["１ あちこち","２ ぐっすり","３ がっかり","４ そっと"],"correct":"C","explanation":"「がっかりする」表示失望、沮丧。"},
+{"id":22,"type":"词汇","question":"友人の相談に（   ）。","options":["１ 受けた","２ 持った","３ 立った","４ 乗った"],"correct":"D","explanation":"「相談に乗る」是固定搭配。"},
+{"id":23,"type":"词汇","question":"私はいつも（   ）色の服を着ている。","options":["１ 地味な","２ のんきな","３ 平らな","４ 勝手な"],"correct":"A","explanation":"「地味な」表示朴素、不显眼。"},
+{"id":24,"type":"词汇","question":"廊下の邪魔な荷物を（   ）。","options":["１ どける","２ もたれる","３ むく","４ はがす"],"correct":"A","explanation":"「どける」表示挪开、移开。"},
+{"id":25,"type":"词汇","question":"私は将来、漫画（   ）になりたい。","options":["１ 員","２ 師","３ 人","４ 家"],"correct":"D","explanation":"「漫画家」是固定说法。"},
+{"id":26,"type":"词汇","question":"母の作る料理が（   ）。","options":["１ 清い","２ 懐かしい","３ のろい","４ 紛らわしい"],"correct":"B","explanation":"「懐かしい」表示怀念、眷恋。"},
+{"id":27,"type":"词汇","question":"彼女は甘いものには（   ）がない。","options":["１ 顔","２ 口","３ 手","４ 目"],"correct":"D","explanation":"「目がない」表示非常喜欢、着迷。"},
+{"id":28,"type":"词汇","question":"部長とゆっくり話したいが、いつも（   ）が合わない。","options":["１ タイミング","２ カーブ","３ ジャンル","４ スムーズ"],"correct":"A","explanation":"「タイミングが合う/合わない」表示时机合适/不合适。"},
+{"id":29,"type":"词汇","question":"ミスを（   ）、あとで大問題になった。","options":["１ 見合わせて","２ 見極めて","３ 見落として","４ 見計らって"],"correct":"C","explanation":"「見落とす」表示漏看、忽略。"},
+{"id":30,"type":"词汇","question":"（   ）ではございますが、乾杯の挨拶をさせていただきます。","options":["１ 遺憾","２ 僭越","３ 画期的","４ 簡便"],"correct":"B","explanation":"「僭越」表示越分、冒昧，用于自谦。"},
+{"id":31,"type":"近义词","question":"今日の試合は延期した。","options":["１ 予定通り行った","２ キャンセルした","３ 時間を短くした","４ スケジュールを遅くした"],"correct":"D","explanation":"「延期」意为推迟、改期。"},
+{"id":32,"type":"近义词","question":"入れ物が壊れた。","options":["１ カバー","２ アイロン","３ ケース","４ スイッチ"],"correct":"C","explanation":"「入れ物」意为容器、器皿。"},
+{"id":33,"type":"近义词","question":"この服は娘にはぴったりだ。","options":["１ ちょうどいい","２ 似合わない","３ 大きい","４ 小さい"],"correct":"A","explanation":"「ぴったり」意为正合适、恰好。"},
+{"id":34,"type":"近义词","question":"紙をちぎってください。","options":["１ 手で切って","２ 折って","３ 数えて","４ 捨て"],"correct":"A","explanation":"「ちぎる」意为撕开、扯下。"},
+{"id":35,"type":"近义词","question":"成田さんは清水さんに勝てっこない。","options":["１ 勝ったことがない","２ 勝てたらしい","３ 勝てるわけがない","４ 勝つかもしれない"],"correct":"C","explanation":"「～っこない」表示绝对不可能..."},
+{"id":36,"type":"近义词","question":"今日は昨日よりやや寒い。","options":["１ 昨日ほど寒くない","２ 昨日よりかなり寒い","３ 昨日より少し寒い","４ 昨日と同じくらい寒い"],"correct":"C","explanation":"「やや」意为稍微、有点儿。"},
+{"id":37,"type":"近义词","question":"毎日へとへとです。","options":["１ とても忙しいです","２ とても疲れます","３ とても楽しいです","４ とてもつらいです"],"correct":"B","explanation":"「へとへと」意为精疲力尽。"},
+{"id":38,"type":"近义词","question":"1月の業務再開を目途に、準備を進める。","options":["１ 建前にして","２ 目標にして","３ 条件にして","４ 希望にして"],"correct":"B","explanation":"「目途」意为目标、期限。"},
+{"id":39,"type":"近义词","question":"永田さんのアメリカ転勤が決まった。うらやましいといったらない。","options":["１ とてもうらやましい","２ 誰もがうらやましいと思っている","３ 全然うらやましいと思わない","４ 誰もうらやましいと思っていない"],"correct":"A","explanation":"「～といったらない」表示程度极高。"},
+{"id":40,"type":"近义词","question":"私は今度の事業に懸念を抱いている。","options":["１ 期待している","２ 懸命に取り組んでいる","３ 憧れを持っている","４ 不安を感じている"],"correct":"D","explanation":"「懸念」意为担心、忧虑。"},
+{"id":41,"type":"阅读","question":"次のメールを読んで問題に答えなさい。\n件名：新商品の試食会について\n営業部各位\nお疲れさまです。商品開発部斉藤です。\nクリスマスにもお正月にも合う当社の新商品「ワッフル風せんべい（仮）」が完成しました。12月1日発売予定です。\nそこで、下記のとおり新商品の試食会を行い、商品名、包装デザインのアイデアを募集したいと思います。\n日時：10月11日（火）11:00～12:00（出入り自由）\n会場：商品開発部ミーティングルーム\n参加ご希望の方はこのメールに返信してください。\n試食会の後、参加者にはアンケートURLをお送りします。\nぜひ皆様のご意見を伺いたいと思います。\nなお、参加希望後ご都合が悪くなった場合の連絡は不要です。\nできるだけ多くの方のご参加をお待ちしております。\n\n試食会を行うのはなぜですか。","options":["１ 新商品の名前や包装デザインを決めるため","２ 新商品の味を改良するため","３ 新商品を発売するかどうか決めるため","４ 新商品の生産計画を立てるため"],"correct":"A","explanation":"文中明确提到'商品名、包装デザインのアイデアを募集'。"},
+{"id":42,"type":"阅读","question":"次のメールを読んで問題に答えなさい。\n件名：新商品の試食会について\n営業部各位\nお疲れさまです。商品開発部斉藤です。\nクリスマスにもお正月にも合う当社の新商品「ワッフル風せんべい（仮）」が完成しました。12月1日発売予定です。\nそこで、下記のとおり新商品の試食会を行い、商品名、包装デザインのアイデアを募集したいと思います。\n日時：10月11日（火）11:00～12:00（出入り自由）\n会場：商品開発部ミーティングルーム\n参加ご希望の方はこのメールに返信してください。\n試食会の後、参加者にはアンケートURLをお送りします。\nぜひ皆様のご意見を伺いたいと思います。\nなお、参加希望後ご都合が悪くなった場合の連絡は不要です。\nできるだけ多くの方のご参加をお待ちしております。\n\nメールの内容と合っているのはどれですか。","options":["１ 参加者は11時までに会場に行かなければならない。","２ 参加者は試食会で配られるアンケートに答える。","３ 新商品は12月の発売に向けて開発された。","４ 参加できない場合も斉藤さんに連絡する。"],"correct":"C","explanation":"文中提到'12月1日発売予定'，说明是为12月发售而开发。"}
         ];
 
-        // ==================== 应用程序状态与核心函数 ====================
+        // ==================== 应用程序状态 ====================
         let currentQuestionIndex = 0;
+        let selectedOption = null;
         let userAnswers = {};
         let wrongQuestions = new Set();
 
-        // 页面加载后初始化
-        window.addEventListener('DOMContentLoaded', () => {
+        // ==================== 页面加载初始化 ====================
+        window.addEventListener('DOMContentLoaded', function() {
             loadQuestion(currentQuestionIndex);
+            updateStatsDisplay();
             document.getElementById('file-input').addEventListener('change', handleFileUpload);
-            document.getElementById('prev-btn').addEventListener('click', () => loadQuestion(--currentQuestionIndex));
-            document.getElementById('next-btn').addEventListener('click', () => loadQuestion(++currentQuestionIndex));
+            document.getElementById('prev-btn').addEventListener('click', prevQuestion);
+            document.getElementById('next-btn').addEventListener('click', nextQuestion);
             document.getElementById('submit-btn').addEventListener('click', submitAnswer);
-            loadProgress(); // 加载保存的进度
+            loadProgress();
         });
 
-        // 加载并显示题目
+        // ==================== 核心函数：加载题目 (已修复) ====================
         function loadQuestion(index) {
             if (index < 0) index = 0;
             if (index >= questions.length) index = questions.length - 1;
             currentQuestionIndex = index;
+            selectedOption = null;
             const q = questions[index];
             document.getElementById('question-text').textContent = q.question;
             document.getElementById('question-type').textContent = q.type;
             const optionsContainer = document.getElementById('options-container');
             optionsContainer.innerHTML = '';
-            q.options.forEach((opt, i) => {
-                const optDiv = document.createElement('div');
-                optDiv.className = 'option';
-                optDiv.innerHTML = `<div class="option-label">${String.fromCharCode(65+i)}</div><div class="option-text">${opt}</div>`;
-                optDiv.addEventListener('click', () => selectOption(i));
-                // 如果已回答过，标记状态
+            q.options.forEach((optionText, i) => {
+                const optionDiv = document.createElement('div');
+                optionDiv.className = 'option';
+                optionDiv.dataset.index = i;
+                const label = document.createElement('div');
+                label.className = 'option-label';
+                label.textContent = String.fromCharCode(65 + i);
+                const text = document.createElement('div');
+                text.className = 'option-text';
+                text.textContent = optionText;
+                optionDiv.appendChild(label);
+                optionDiv.appendChild(text);
+                optionDiv.addEventListener('click', function() { selectOption(i); });
                 if (userAnswers[index] !== undefined) {
-                    if (String.fromCharCode(65+i) === q.correct) optDiv.classList.add('correct');
-                    if (userAnswers[index] === i && String.fromCharCode(65+i) !== q.correct) optDiv.classList.add('wrong');
-                    if (userAnswers[index] === i) optDiv.classList.add('selected');
+                    if (String.fromCharCode(65 + i) === q.correct) optionDiv.classList.add('correct');
+                    if (userAnswers[index] === i && String.fromCharCode(65 + i) !== q.correct) optionDiv.classList.add('wrong');
+                    if (userAnswers[index] === i) optionDiv.classList.add('selected');
                 }
-                optionsContainer.appendChild(optDiv);
+                optionsContainer.appendChild(optionDiv);
             });
-            // 显示或隐藏解析
-            document.getElementById('explanation').style.display = userAnswers[index] !== undefined ? 'block' : 'none';
+            const explanationDiv = document.getElementById('explanation');
             if (userAnswers[index] !== undefined) {
                 document.getElementById('explanation-text').textContent = q.explanation;
+                explanationDiv.classList.add('show');
+            } else {
+                explanationDiv.classList.remove('show');
             }
         }
 
         function selectOption(index) {
-            if (userAnswers[currentQuestionIndex] !== undefined) return; // 已回答则不允许修改
+            if (userAnswers[currentQuestionIndex] !== undefined) return;
             document.querySelectorAll('.option').forEach(opt => opt.classList.remove('selected'));
-            event.currentTarget.classList.add('selected');
-            // 此处为简化，未记录选择，提交时才记录
+            document.querySelector(`.option[data-index="${index}"]`).classList.add('selected');
+            selectedOption = index;
         }
 
         function submitAnswer() {
-            const selectedOpt = document.querySelector('.option.selected');
-            if (!selectedOpt && userAnswers[currentQuestionIndex] === undefined) {
+            if (selectedOption === null && userAnswers[currentQuestionIndex] === undefined) {
                 alert('请先选择一个答案！'); return;
             }
             if (userAnswers[currentQuestionIndex] === undefined) {
-                const index = Array.from(document.querySelectorAll('.option')).indexOf(selectedOpt);
-                userAnswers[currentQuestionIndex] = index;
+                userAnswers[currentQuestionIndex] = selectedOption;
                 const q = questions[currentQuestionIndex];
-                if (String.fromCharCode(65+index) !== q.correct) wrongQuestions.add(currentQuestionIndex);
+                if (String.fromCharCode(65 + selectedOption) !== q.correct) {
+                    wrongQuestions.add(currentQuestionIndex);
+                }
                 saveProgress();
+                updateStatsDisplay();
             }
             document.getElementById('explanation-text').textContent = questions[currentQuestionIndex].explanation;
-            document.getElementById('explanation').style.display = 'block';
+            document.getElementById('explanation').classList.add('show');
         }
+
+        function prevQuestion() { loadQuestion(currentQuestionIndex - 1); }
+        function nextQuestion() { loadQuestion(currentQuestionIndex + 1); }
 
         // ==================== 关键：本地文件导入功能 ====================
         function handleFileUpload(event) {
             const file = event.target.files[0];
-            if (!file) return;
+            if (!file || !file.name.endsWith('.json')) {
+                alert('请选择有效的JSON文件'); return;
+            }
             const reader = new FileReader();
             reader.onload = function(e) {
                 try {
@@ -171,23 +238,21 @@
                         wrongQuestions.clear();
                         saveProgress();
                         loadQuestion(0);
-                        document.getElementById('import-status').innerHTML = `<div style="color:green; padding:10px; background:#d4edda; border-radius:5px;">✅ 成功导入 ${newQuestions.length} 道题目！已跳转到第一题。</div>`;
-                        setTimeout(() => switchTab('practice'), 1000);
-                    } else {
-                        throw new Error('文件格式不正确：应为包含题目数组的JSON文件');
-                    }
+                        document.getElementById('import-status').innerHTML = '<div style="color:green; background:#d4edda; padding:10px; border-radius:5px;">✅ 成功导入 ' + newQuestions.length + ' 道题目！</div>';
+                        setTimeout(() => switchTab('practice'), 800);
+                    } else { throw new Error('JSON格式不正确：应为题目数组'); }
                 } catch (error) {
-                    document.getElementById('import-status').innerHTML = `<div style="color:#721c24; padding:10px; background:#f8d7da; border-radius:5px;">❌ 导入失败：${error.message}</div>`;
+                    document.getElementById('import-status').innerHTML = '<div style="color:#721c24; background:#f8d7da; padding:10px; border-radius:5px;">❌ 导入失败：' + error.message + '</div>';
                 }
             };
             reader.readAsText(file);
         }
 
-        // ==================== 辅助功能：标签页切换、进度保存等 ====================
+        // ==================== 标签页切换、进度保存等 ====================
         function switchTab(tabName) {
             document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
             document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-            event.currentTarget.classList.add('active');
+            document.querySelector(`button[onclick="switchTab('${tabName}')"]`).classList.add('active');
             document.getElementById(`${tabName}-tab`).classList.add('active');
             if (tabName === 'stats') updateStatsDisplay();
         }
@@ -213,8 +278,29 @@
             const correct = Object.keys(userAnswers).filter(idx => {
                 return String.fromCharCode(65 + userAnswers[idx]) === questions[idx].correct;
             }).length;
-            const html = `<p>总题数：${total}</p><p>已答：${answered}</p><p>正确：${correct}</p><p>错误：${wrongQuestions.size}</p><p>正确率：${answered > 0 ? Math.round(correct/answered*100) : 0}%</p>`;
-            document.getElementById('stats-content').innerHTML = html;
+            const rate = answered > 0 ? Math.round(correct / answered * 100) : 0;
+            const statsHTML = `
+                <div class="stats-grid">
+                    <div class="stat-box"><strong>${total}</strong><br>总题数</div>
+                    <div class="stat-box"><strong>${answered}</strong><br>已答题</div>
+                    <div class="stat-box"><strong>${correct}</strong><br>答对数</div>
+                    <div class="stat-box"><strong>${wrongQuestions.size}</strong><br>错题数</div>
+                </div>
+                <p style="margin-top: 15px; font-size: 1.2em;">正确率：<strong>${rate}%</strong></p>
+            `;
+            document.getElementById('stats-content').innerHTML = statsHTML;
+        }
+
+        function clearProgress() {
+            if (confirm('确定要清空所有学习记录吗？此操作不可撤销。')) {
+                localStorage.removeItem('jtest_answers');
+                localStorage.removeItem('jtest_wrong');
+                userAnswers = {};
+                wrongQuestions.clear();
+                loadQuestion(currentQuestionIndex);
+                updateStatsDisplay();
+                alert('学习记录已清空！');
+            }
         }
     </script>
 </body>
