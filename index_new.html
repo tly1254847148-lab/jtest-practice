@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>JTEST刷题系统 - 增强版</title>
+    <title>JTEST刷题系统 - 测试版</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Segoe UI', sans-serif; line-height: 1.6; color: #333; background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); min-height: 100vh; padding: 20px; }
@@ -40,8 +40,8 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>📚 JTEST刷题系统 - 增强版</h1>
-            <p>已内置42道真题，支持一键导入新题库</p>
+            <h1>📚 JTEST刷题系统 - 功能测试版</h1>
+            <p>内置2道题，用于测试着色与导入功能</p>
         </div>
         <div class="tab-container">
             <button class="tab active" onclick="switchTab('practice')">刷题模式</button>
@@ -68,11 +68,11 @@
 
         <div id="import-tab" class="tab-content">
             <div class="import-section">
-                <h3>📁 导入新题库</h3>
-                <p>选择你整理的JSON题库文件（将替换当前所有题目）：</p>
+                <h3>📁 导入完整题库 (功能测试)</h3>
+                <p>请选择你的 <code>jtest_165_questions.json</code> 文件：</p>
                 <input type="file" id="file-input" accept=".json">
                 <p style="margin-top: 20px; color: #666; font-size: 0.9em;">
-                    <strong>提示：</strong>你也可以随时返回使用内置的42道默认题。
+                    <strong>测试目标：</strong>导入后应显示新题库的第一题，且答题功能正常。
                 </p>
                 <div id="import-status"></div>
             </div>
@@ -90,50 +90,24 @@
     </div>
 
     <script>
-        // ==================== 核心：内置的42道初始题库 ====================
+        // ==================== 核心：仅2道测试题 ====================
         let questions = [
-{"id":1,"type":"语法","question":"面接時間は１人（   ）10 分だ。","options":["１ に沿って","２ につき","３ にかけては","４ にわたって"],"correct":"B","explanation":"「につき」表示单位、比率，意为'每...'。"},
-{"id":2,"type":"语法","question":"重要なことは同じ間違いを繰り返さない（   ）だ。","options":["１ つもり","２ ところ","３ もの","４ こと"],"correct":"D","explanation":"「～ことだ」表示建议、忠告，意为'重要的是...'。"},
-{"id":3,"type":"语法","question":"この製品の輸出量は（   ）つつある。","options":["１ 増え","２ 増える","３ 増えて","４ 増えた"],"correct":"A","explanation":"「～つつある」前接动词ます形，表示动作正在进行中。"},
-{"id":4,"type":"语法","question":"今の仕事はお客様に喜ばれるので、やり（   ）を感じる。","options":["１ がたさ","２ ぎみ","３ がい","４ 次第"],"correct":"C","explanation":"「やりがい」表示工作的价值、意义。"},
-{"id":5,"type":"语法","question":"行列に並んで（   ）して、手に入れたいとは思わない。","options":["１ から","２ と","３ も","４ まで"],"correct":"D","explanation":"「まで」表示极端程度，'甚至要...'。"},
-{"id":6,"type":"语法","question":"仕事が（   ）ものだから、長い間友達に連絡していない。","options":["１ 忙しくない","２ 忙しい","３ 忙しくて","４ 忙し"],"correct":"B","explanation":"「～ものだから」前接简体形，表示原因理由。"},
-{"id":7,"type":"语法","question":"上司に書類作成を頼まれ、（   ）ざるを得なくなった。","options":["１ 残業","２ 残業し","３ 残業せ","４ 残業する"],"correct":"C","explanation":"「～ざるを得ない」前接动词未然形（する→せざるを得ない）。"},
-{"id":8,"type":"语法","question":"剣を持った姿（   ）、まるで戦国時代の武士のようだ。","options":["１ といえども","２ かたがた","３ ならでは","４ たるや"],"correct":"D","explanation":"「～たるや」表示提起话题并进行评价。"},
-{"id":9,"type":"语法","question":"彼は結婚してからという（   ）、まっすぐ家に帰るようになった。","options":["１ もの","２ こと","３ わけ","４ うち"],"correct":"A","explanation":"「～からというもの」表示自从...以来。"},
-{"id":10,"type":"语法","question":"子供を学校に迎えに（   ）がてら買い物をした。","options":["１ 行こう","２ 行き","３ 行って","４ 行く"],"correct":"B","explanation":"「～がてら」前接动词ます形，表示顺便。"},
-{"id":11,"type":"语法","question":"昨日、今日（   ）海が荒れている。","options":["１ と","２ も","３ に","４ で"],"correct":"A","explanation":"「～と～と」表示列举，'...和...都...'。"},
-{"id":12,"type":"语法","question":"希望の大学に入学できるかどうか本人の努力（   ）。","options":["１ 極まりない","２ だにしない","３ いかんだ","４ にあたらない"],"correct":"C","explanation":"「～いかんだ」表示取决于..."},
-{"id":13,"type":"语法","question":"安月給でこんなに（   ）はかなわない。","options":["１ 働かされて","２ 働かされる","３ 働かされ","４ 働かされた"],"correct":"A","explanation":"「～てはかなわない」表示无法忍受..."},
-{"id":14,"type":"语法","question":"エアコンが壊れて、暑い（   ）なんのって。","options":["１ に","２ が","３ の","４ と"],"correct":"C","explanation":"「～のなんのって」表示非常...，强调程度。"},
-{"id":15,"type":"语法","question":"彼女とは結婚（   ）付き合っている。","options":["１ をおして","２ を経て","３ を前提に","４ をたよりに"],"correct":"C","explanation":"「～を前提に」表示以...为前提。"},
-{"id":16,"type":"语法","question":"高橋：「中村さん、中国語が話せるかな。」\n池田：「奥さんが中国人だからといって、（   ）。","options":["１ 話せるかのようだよ","２ 話せるおかげだよ","３ 話せるに違いないよ","４ 話せるとは限らないよ"],"correct":"D","explanation":"「～からといって～とは限らない」表示虽说...但未必..."},
-{"id":17,"type":"语法","question":"A：「登山、始めたんですって？」\nB：「いや、道具は（   ）、まだ一度も行けていないんだ」","options":["１ 揃えさえすれば","２ 揃えたことだし","３ 揃えたというより","４ 揃えたものの"],"correct":"D","explanation":"「～ものの」表示转折，'虽然...但是...'。"},
-{"id":18,"type":"语法","question":"吉岡：「今日の食事会、石井さんも参加するでしょうか」\n篠原：「（   ）、きっと来るよ。毎回参加しているんだから」","options":["１ 石井さんのことだから","２ 石井さんにしては","３ 石井さん次第で","４ 石井さんどころか"],"correct":"A","explanation":"「～のことだから」表示根据...的性格来推测。"},
-{"id":19,"type":"语法","question":"A：「事故で電車が止まっているみたいだよ」\nB：「困ったな。（   ）」","options":["１ 電車で帰るまでのことだな","２ 帰ろうにも帰れないな","３ 電車で帰らずともよいな","４ 帰ったら最後だな"],"correct":"B","explanation":"「～（よ）うにも～ない」表示即使想...也不能..."},
-{"id":20,"type":"语法","question":"上司：「午後から外出するので、何かあったら（   ）連絡してください」\n部下：「わかりました」","options":["１ 連絡することなしに","２ 電話なりメールなりで","３ メールにかまけて","４ 電話しようがしまいが"],"correct":"B","explanation":"「～なり～なり」表示列举，'...也好...也好'。"},
-{"id":21,"type":"词汇","question":"試合に負けて（   ）した。","options":["１ あちこち","２ ぐっすり","３ がっかり","４ そっと"],"correct":"C","explanation":"「がっかりする」表示失望、沮丧。"},
-{"id":22,"type":"词汇","question":"友人の相談に（   ）。","options":["１ 受けた","２ 持った","３ 立った","４ 乗った"],"correct":"D","explanation":"「相談に乗る」是固定搭配。"},
-{"id":23,"type":"词汇","question":"私はいつも（   ）色の服を着ている。","options":["１ 地味な","２ のんきな","３ 平らな","４ 勝手な"],"correct":"A","explanation":"「地味な」表示朴素、不显眼。"},
-{"id":24,"type":"词汇","question":"廊下の邪魔な荷物を（   ）。","options":["１ どける","２ もたれる","３ むく","４ はがす"],"correct":"A","explanation":"「どける」表示挪开、移开。"},
-{"id":25,"type":"词汇","question":"私は将来、漫画（   ）になりたい。","options":["１ 員","２ 師","３ 人","４ 家"],"correct":"D","explanation":"「漫画家」是固定说法。"},
-{"id":26,"type":"词汇","question":"母の作る料理が（   ）。","options":["１ 清い","２ 懐かしい","３ のろい","４ 紛らわしい"],"correct":"B","explanation":"「懐かしい」表示怀念、眷恋。"},
-{"id":27,"type":"词汇","question":"彼女は甘いものには（   ）がない。","options":["１ 顔","２ 口","３ 手","４ 目"],"correct":"D","explanation":"「目がない」表示非常喜欢、着迷。"},
-{"id":28,"type":"词汇","question":"部長とゆっくり話したいが、いつも（   ）が合わない。","options":["１ タイミング","２ カーブ","３ ジャンル","４ スムーズ"],"correct":"A","explanation":"「タイミングが合う/合わない」表示时机合适/不合适。"},
-{"id":29,"type":"词汇","question":"ミスを（   ）、あとで大問題になった。","options":["１ 見合わせて","２ 見極めて","３ 見落として","４ 見計らって"],"correct":"C","explanation":"「見落とす」表示漏看、忽略。"},
-{"id":30,"type":"词汇","question":"（   ）ではございますが、乾杯の挨拶をさせていただきます。","options":["１ 遺憾","２ 僭越","３ 画期的","４ 簡便"],"correct":"B","explanation":"「僭越」表示越分、冒昧，用于自谦。"},
-{"id":31,"type":"近义词","question":"今日の試合は延期した。","options":["１ 予定通り行った","２ キャンセルした","３ 時間を短くした","４ スケジュールを遅くした"],"correct":"D","explanation":"「延期」意为推迟、改期。"},
-{"id":32,"type":"近义词","question":"入れ物が壊れた。","options":["１ カバー","２ アイロン","３ ケース","４ スイッチ"],"correct":"C","explanation":"「入れ物」意为容器、器皿。"},
-{"id":33,"type":"近义词","question":"この服は娘にはぴったりだ。","options":["１ ちょうどいい","２ 似合わない","３ 大きい","４ 小さい"],"correct":"A","explanation":"「ぴったり」意为正合适、恰好。"},
-{"id":34,"type":"近义词","question":"紙をちぎってください。","options":["１ 手で切って","２ 折って","３ 数えて","４ 捨て"],"correct":"A","explanation":"「ちぎる」意为撕开、扯下。"},
-{"id":35,"type":"近义词","question":"成田さんは清水さんに勝てっこない。","options":["１ 勝ったことがない","２ 勝てたらしい","３ 勝てるわけがない","４ 勝つかもしれない"],"correct":"C","explanation":"「～っこない」表示绝对不可能..."},
-{"id":36,"type":"近义词","question":"今日は昨日よりやや寒い。","options":["１ 昨日ほど寒くない","２ 昨日よりかなり寒い","３ 昨日より少し寒い","４ 昨日と同じくらい寒い"],"correct":"C","explanation":"「やや」意为稍微、有点儿。"},
-{"id":37,"type":"近义词","question":"毎日へとへとです。","options":["１ とても忙しいです","２ とても疲れます","３ とても楽しいです","４ とてもつらいです"],"correct":"B","explanation":"「へとへと」意为精疲力尽。"},
-{"id":38,"type":"近义词","question":"1月の業務再開を目途に、準備を進める。","options":["１ 建前にして","２ 目標にして","３ 条件にして","４ 希望にして"],"correct":"B","explanation":"「目途」意为目标、期限。"},
-{"id":39,"type":"近义词","question":"永田さんのアメリカ転勤が決まった。うらやましいといったらない。","options":["１ とてもうらやましい","２ 誰もがうらやましいと思っている","３ 全然うらやましいと思わない","４ 誰もうらやましいと思っていない"],"correct":"A","explanation":"「～といったらない」表示程度极高。"},
-{"id":40,"type":"近义词","question":"私は今度の事業に懸念を抱いている。","options":["１ 期待している","２ 懸命に取り組んでいる","３ 憧れを持っている","４ 不安を感じている"],"correct":"D","explanation":"「懸念」意为担心、忧虑。"},
-{"id":41,"type":"阅读","question":"次のメールを読んで問題に答えなさい。\n件名：新商品の試食会について\n営業部各位\nお疲れさまです。商品開発部斉藤です。\nクリスマスにもお正月にも合う当社の新商品「ワッフル風せんべい（仮）」が完成しました。12月1日発売予定です。\nそこで、下記のとおり新商品の試食会を行い、商品名、包装デザインのアイデアを募集したいと思います。\n日時：10月11日（火）11:00～12:00（出入り自由）\n会場：商品開発部ミーティングルーム\n参加ご希望の方はこのメールに返信してください。\n試食会の後、参加者にはアンケートURLをお送りします。\nぜひ皆様のご意見を伺いたいと思います。\nなお、参加希望後ご都合が悪くなった場合の連絡は不要です。\nできるだけ多くの方のご参加をお待ちしております。\n\n試食会を行うのはなぜですか。","options":["１ 新商品の名前や包装デザインを決めるため","２ 新商品の味を改良するため","３ 新商品を発売するかどうか決めるため","４ 新商品の生産計画を立てるため"],"correct":"A","explanation":"文中明确提到'商品名、包装デザインのアイデアを募集'。"},
-{"id":42,"type":"阅读","question":"次のメールを読んで問題に答えなさい。\n件名：新商品の試食会について\n営業部各位\nお疲れさまです。商品開発部斉藤です。\nクリスマスにもお正月にも合う当社の新商品「ワッフル風せんべい（仮）」が完成しました。12月1日発売予定です。\nそこで、下記のとおり新商品の试食会を行い、商品名、包装デザインのアイデアを募集したいと思います。\n日時：10月11日（火）11:00～12:00（出入り自由）\n会場：商品開発部ミーティングルーム\n参加ご希望の方はこのメールに返信してください。\n试食会の後、参加者にはアンケートURLをお送りします。\nぜひ皆様のご意见を伺いたいと思います。\nなお、参加希望后ご都合が悪くなった场合の连络は不要です。\nできるだけ多くの方のご参加をお待ちしております。\n\nメールの内容と合っているのはどれですか。","options":["１ 参加者は11时までに会场に行かなければならない。","２ 参加者は试食会で配られるアンケートに答える。","３ 新商品は12月の発売に向けて開発された。","４ 参加できない场合も斉藤さんに连络する。"],"correct":"C","explanation":"文中提到'12月1日発売予定'，说明是为12月发售而开发。"}
+            {
+                "id": 1,
+                "type": "语法",
+                "question": "面接時間は１人（   ）10 分だ。",
+                "options": ["１ に沿って", "２ につき", "３ にかけては", "４ にわたって"],
+                "correct": "2", // 第二个选项是正确答案
+                "explanation": "「につき」表示单位、比率，意为'每...'。本题用于测试正确选项应显示绿色背景。"
+            },
+            {
+                "id": 2,
+                "type": "语法",
+                "question": "重要なことは同じ間違いを繰り返さない（   ）だ。",
+                "options": ["１ つもり", "２ ところ", "３ もの", "４ こと"],
+                "correct": "4", // 第四个选项是正确答案
+                "explanation": "「～ことだ」表示建议、忠告，意为'重要的是...'。"
+            }
         ];
 
         // ==================== 应用程序状态 ====================
@@ -153,36 +127,55 @@
             loadProgress();
         });
 
-        // ==================== 核心函数：加载题目 (已修改：移除A/B/C/D) ====================
+        // ==================== 核心函数：加载题目 ====================
         function loadQuestion(index) {
             if (index < 0) index = 0;
             if (index >= questions.length) index = questions.length - 1;
             currentQuestionIndex = index;
             selectedOption = null;
+
             const q = questions[index];
             document.getElementById('question-text').textContent = q.question;
             document.getElementById('question-type').textContent = q.type;
+
             const optionsContainer = document.getElementById('options-container');
             optionsContainer.innerHTML = '';
+
             q.options.forEach((optionText, i) => {
                 const optionDiv = document.createElement('div');
                 optionDiv.className = 'option';
                 optionDiv.dataset.index = i;
-                // 【修改点】直接显示选项文本，不再生成A/B/C/D标签
+
                 const text = document.createElement('div');
                 text.className = 'option-text';
-                text.textContent = optionText; // 直接显示“１ に沿って”等
+                text.textContent = optionText;
                 optionDiv.appendChild(text);
+
                 optionDiv.addEventListener('click', function() { selectOption(i); });
-                // 【修改点】判断正误时，使用数字索引(1,2,3,4)而非字母
+
+                // ========== 【关键修正】判断并标记选项状态 ==========
                 if (userAnswers[index] !== undefined) {
-                    const correctNum = parseInt(q.correct); // 正确答案数字，如2
-                    if ((i + 1) === correctNum) optionDiv.classList.add('correct'); // 标记正确选项
-                    if (userAnswers[index] === i && (i + 1) !== correctNum) optionDiv.classList.add('wrong'); // 标记用户答错的选项
-                    if (userAnswers[index] === i) optionDiv.classList.add('selected'); // 标记用户所选
+                    // 用户已提交本题答案
+                    const correctAnswerNum = parseInt(q.correct); // 正确答案的数字，如2
+
+                    // 1. 标记正确答案 (绿色)
+                    if ((i + 1) === correctAnswerNum) {
+                        optionDiv.classList.add('correct');
+                    }
+                    // 2. 标记用户选错的那个选项 (红色)
+                    if (userAnswers[index] === i && (i + 1) !== correctAnswerNum) {
+                        optionDiv.classList.add('wrong');
+                    }
+                    // 3. 标记用户选择的选项 (蓝色边框)
+                    if (userAnswers[index] === i) {
+                        optionDiv.classList.add('selected');
+                    }
                 }
+
                 optionsContainer.appendChild(optionDiv);
             });
+
+            // 显示/隐藏解析
             const explanationDiv = document.getElementById('explanation');
             if (userAnswers[index] !== undefined) {
                 document.getElementById('explanation-text').textContent = q.explanation;
@@ -201,21 +194,26 @@
 
         function submitAnswer() {
             if (selectedOption === null && userAnswers[currentQuestionIndex] === undefined) {
-                alert('请先选择一个答案！'); return;
+                alert('请先选择一个答案！');
+                return;
             }
+
             if (userAnswers[currentQuestionIndex] === undefined) {
+                // 首次提交本题答案
                 userAnswers[currentQuestionIndex] = selectedOption;
                 const q = questions[currentQuestionIndex];
-                // 【修改点】判断正误时，使用数字索引(1,2,3,4)而非字母
-                const correctNum = parseInt(q.correct); // 转为数字，如2
-                if ((selectedOption + 1) !== correctNum) { // 用户选项索引+1后与正确答案比较
+                const correctAnswerNum = parseInt(q.correct);
+
+                // ========== 【关键修正】判断是否答错 ==========
+                if ((selectedOption + 1) !== correctAnswerNum) {
+                    // 答错了，加入错题集
                     wrongQuestions.add(currentQuestionIndex);
                 }
+
                 saveProgress();
                 updateStatsDisplay();
+                loadQuestion(currentQuestionIndex); // 重新加载以更新选项颜色
             }
-            document.getElementById('explanation-text').textContent = questions[currentQuestionIndex].explanation;
-            document.getElementById('explanation').classList.add('show');
         }
 
         function prevQuestion() { loadQuestion(currentQuestionIndex - 1); }
@@ -225,22 +223,35 @@
         function handleFileUpload(event) {
             const file = event.target.files[0];
             if (!file || !file.name.endsWith('.json')) {
-                alert('请选择有效的JSON文件'); return;
+                alert('请选择有效的JSON文件');
+                return;
             }
+
             const reader = new FileReader();
             reader.onload = function(e) {
                 try {
                     const newQuestions = JSON.parse(e.target.result);
                     if (Array.isArray(newQuestions) && newQuestions.length > 0) {
+                        // 验证题库格式是否有correct字段
+                        const sampleQ = newQuestions[0];
+                        if (!sampleQ.hasOwnProperty('correct')) {
+                            throw new Error('题库格式错误：缺少"correct"字段');
+                        }
+
+                        // 替换题库，重置状态
                         questions = newQuestions;
                         currentQuestionIndex = 0;
                         userAnswers = {};
                         wrongQuestions.clear();
                         saveProgress();
                         loadQuestion(0);
-                        document.getElementById('import-status').innerHTML = '<div style="color:green; background:#d4edda; padding:10px; border-radius:5px;">✅ 成功导入 ' + newQuestions.length + ' 道题目！</div>';
+                        updateStatsDisplay();
+
+                        document.getElementById('import-status').innerHTML = '<div style="color:green; background:#d4edda; padding:10px; border-radius:5px;">✅ 成功导入 ' + newQuestions.length + ' 道题目！已跳转到第一题。</div>';
                         setTimeout(() => switchTab('practice'), 800);
-                    } else { throw new Error('JSON格式不正确：应为题目数组'); }
+                    } else {
+                        throw new Error('JSON格式不正确：应为题目数组');
+                    }
                 } catch (error) {
                     document.getElementById('import-status').innerHTML = '<div style="color:#721c24; background:#f8d7da; padding:10px; border-radius:5px;">❌ 导入失败：' + error.message + '</div>';
                 }
@@ -275,21 +286,28 @@
         function updateStatsDisplay() {
             const total = questions.length;
             const answered = Object.keys(userAnswers).length;
-            const correct = Object.keys(userAnswers).filter(idx => {
+
+            // ========== 【关键修正】计算答对题数 ==========
+            const correctCount = Object.keys(userAnswers).filter(idx => {
                 const q = questions[idx];
                 const userAnswerIndex = userAnswers[idx];
-                // 【修改点】统计时，使用数字索引比较
-                return (userAnswerIndex + 1) === parseInt(q.correct);
+                const correctAnswerNum = parseInt(q.correct);
+                // 用户答案索引+1后与正确答案数字比较
+                return (userAnswerIndex + 1) === correctAnswerNum;
             }).length;
-            const rate = answered > 0 ? Math.round(correct / answered * 100) : 0;
+
+            const wrongCount = wrongQuestions.size;
+            const rate = answered > 0 ? Math.round(correctCount / answered * 100) : 0;
+
             const statsHTML = `
                 <div class="stats-grid">
                     <div class="stat-box"><strong>${total}</strong><br>总题数</div>
                     <div class="stat-box"><strong>${answered}</strong><br>已答题</div>
-                    <div class="stat-box"><strong>${correct}</strong><br>答对数</div>
-                    <div class="stat-box"><strong>${wrongQuestions.size}</strong><br>错题数</div>
+                    <div class="stat-box"><strong>${correctCount}</strong><br>答对数</div>
+                    <div class="stat-box"><strong>${wrongCount}</strong><br>错题数</div>
                 </div>
                 <p style="margin-top: 15px; font-size: 1.2em;">正确率：<strong>${rate}%</strong></p>
+                <p style="margin-top: 10px; color: #666; font-size: 0.9em;">*统计基于当前${total}道题</p>
             `;
             document.getElementById('stats-content').innerHTML = statsHTML;
         }
