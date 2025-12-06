@@ -21,7 +21,6 @@
         .option.selected { border-color: #2575fc; background: #e7f1ff; }
         .option.correct { border-color: #28a745; background: #d4edda; }
         .option.wrong { border-color: #dc3545; background: #f8d7da; }
-        .option-label { display: flex; align-items: center; justify-content: center; width: 30px; height: 30px; background: #e9ecef; border-radius: 50%; margin-right: 15px; font-weight: bold; }
         .option-text { flex: 1; }
         .explanation { margin-top: 25px; padding: 20px; background: #e7f1ff; border-radius: 10px; border-left: 4px solid #2575fc; display: none; }
         .explanation.show { display: block; }
@@ -134,7 +133,7 @@
 {"id":39,"type":"近义词","question":"永田さんのアメリカ転勤が決まった。うらやましいといったらない。","options":["１ とてもうらやましい","２ 誰もがうらやましいと思っている","３ 全然うらやましいと思わない","４ 誰もうらやましいと思っていない"],"correct":"A","explanation":"「～といったらない」表示程度极高。"},
 {"id":40,"type":"近义词","question":"私は今度の事業に懸念を抱いている。","options":["１ 期待している","２ 懸命に取り組んでいる","３ 憧れを持っている","４ 不安を感じている"],"correct":"D","explanation":"「懸念」意为担心、忧虑。"},
 {"id":41,"type":"阅读","question":"次のメールを読んで問題に答えなさい。\n件名：新商品の試食会について\n営業部各位\nお疲れさまです。商品開発部斉藤です。\nクリスマスにもお正月にも合う当社の新商品「ワッフル風せんべい（仮）」が完成しました。12月1日発売予定です。\nそこで、下記のとおり新商品の試食会を行い、商品名、包装デザインのアイデアを募集したいと思います。\n日時：10月11日（火）11:00～12:00（出入り自由）\n会場：商品開発部ミーティングルーム\n参加ご希望の方はこのメールに返信してください。\n試食会の後、参加者にはアンケートURLをお送りします。\nぜひ皆様のご意見を伺いたいと思います。\nなお、参加希望後ご都合が悪くなった場合の連絡は不要です。\nできるだけ多くの方のご参加をお待ちしております。\n\n試食会を行うのはなぜですか。","options":["１ 新商品の名前や包装デザインを決めるため","２ 新商品の味を改良するため","３ 新商品を発売するかどうか決めるため","４ 新商品の生産計画を立てるため"],"correct":"A","explanation":"文中明确提到'商品名、包装デザインのアイデアを募集'。"},
-{"id":42,"type":"阅读","question":"次のメールを読んで問題に答えなさい。\n件名：新商品の試食会について\n営業部各位\nお疲れさまです。商品開発部斉藤です。\nクリスマスにもお正月にも合う当社の新商品「ワッフル風せんべい（仮）」が完成しました。12月1日発売予定です。\nそこで、下記のとおり新商品の試食会を行い、商品名、包装デザインのアイデアを募集したいと思います。\n日時：10月11日（火）11:00～12:00（出入り自由）\n会場：商品開発部ミーティングルーム\n参加ご希望の方はこのメールに返信してください。\n試食会の後、参加者にはアンケートURLをお送りします。\nぜひ皆様のご意見を伺いたいと思います。\nなお、参加希望後ご都合が悪くなった場合の連絡は不要です。\nできるだけ多くの方のご参加をお待ちしております。\n\nメールの内容と合っているのはどれですか。","options":["１ 参加者は11時までに会場に行かなければならない。","２ 参加者は試食会で配られるアンケートに答える。","３ 新商品は12月の発売に向けて開発された。","４ 参加できない場合も斉藤さんに連絡する。"],"correct":"C","explanation":"文中提到'12月1日発売予定'，说明是为12月发售而开发。"}
+{"id":42,"type":"阅读","question":"次のメールを読んで問題に答えなさい。\n件名：新商品の試食会について\n営業部各位\nお疲れさまです。商品開発部斉藤です。\nクリスマスにもお正月にも合う当社の新商品「ワッフル風せんべい（仮）」が完成しました。12月1日発売予定です。\nそこで、下記のとおり新商品の试食会を行い、商品名、包装デザインのアイデアを募集したいと思います。\n日時：10月11日（火）11:00～12:00（出入り自由）\n会場：商品開発部ミーティングルーム\n参加ご希望の方はこのメールに返信してください。\n试食会の後、参加者にはアンケートURLをお送りします。\nぜひ皆様のご意见を伺いたいと思います。\nなお、参加希望后ご都合が悪くなった场合の连络は不要です。\nできるだけ多くの方のご参加をお待ちしております。\n\nメールの内容と合っているのはどれですか。","options":["１ 参加者は11时までに会场に行かなければならない。","２ 参加者は试食会で配られるアンケートに答える。","３ 新商品は12月の発売に向けて開発された。","４ 参加できない场合も斉藤さんに连络する。"],"correct":"C","explanation":"文中提到'12月1日発売予定'，说明是为12月发售而开发。"}
         ];
 
         // ==================== 应用程序状态 ====================
@@ -154,7 +153,7 @@
             loadProgress();
         });
 
-        // ==================== 核心函数：加载题目 (已修复) ====================
+        // ==================== 核心函数：加载题目 (已修改：移除A/B/C/D) ====================
         function loadQuestion(index) {
             if (index < 0) index = 0;
             if (index >= questions.length) index = questions.length - 1;
@@ -169,19 +168,18 @@
                 const optionDiv = document.createElement('div');
                 optionDiv.className = 'option';
                 optionDiv.dataset.index = i;
-                const label = document.createElement('div');
-                label.className = 'option-label';
-                label.textContent = String.fromCharCode(65 + i);
+                // 【修改点】直接显示选项文本，不再生成A/B/C/D标签
                 const text = document.createElement('div');
                 text.className = 'option-text';
-                text.textContent = optionText;
-                optionDiv.appendChild(label);
+                text.textContent = optionText; // 直接显示“１ に沿って”等
                 optionDiv.appendChild(text);
                 optionDiv.addEventListener('click', function() { selectOption(i); });
+                // 【修改点】判断正误时，使用数字索引(1,2,3,4)而非字母
                 if (userAnswers[index] !== undefined) {
-                    if (String.fromCharCode(65 + i) === q.correct) optionDiv.classList.add('correct');
-                    if (userAnswers[index] === i && String.fromCharCode(65 + i) !== q.correct) optionDiv.classList.add('wrong');
-                    if (userAnswers[index] === i) optionDiv.classList.add('selected');
+                    const correctNum = parseInt(q.correct); // 正确答案数字，如2
+                    if ((i + 1) === correctNum) optionDiv.classList.add('correct'); // 标记正确选项
+                    if (userAnswers[index] === i && (i + 1) !== correctNum) optionDiv.classList.add('wrong'); // 标记用户答错的选项
+                    if (userAnswers[index] === i) optionDiv.classList.add('selected'); // 标记用户所选
                 }
                 optionsContainer.appendChild(optionDiv);
             });
@@ -208,7 +206,9 @@
             if (userAnswers[currentQuestionIndex] === undefined) {
                 userAnswers[currentQuestionIndex] = selectedOption;
                 const q = questions[currentQuestionIndex];
-                if (String.fromCharCode(65 + selectedOption) !== q.correct) {
+                // 【修改点】判断正误时，使用数字索引(1,2,3,4)而非字母
+                const correctNum = parseInt(q.correct); // 转为数字，如2
+                if ((selectedOption + 1) !== correctNum) { // 用户选项索引+1后与正确答案比较
                     wrongQuestions.add(currentQuestionIndex);
                 }
                 saveProgress();
@@ -276,7 +276,10 @@
             const total = questions.length;
             const answered = Object.keys(userAnswers).length;
             const correct = Object.keys(userAnswers).filter(idx => {
-                return String.fromCharCode(65 + userAnswers[idx]) === questions[idx].correct;
+                const q = questions[idx];
+                const userAnswerIndex = userAnswers[idx];
+                // 【修改点】统计时，使用数字索引比较
+                return (userAnswerIndex + 1) === parseInt(q.correct);
             }).length;
             const rate = answered > 0 ? Math.round(correct / answered * 100) : 0;
             const statsHTML = `
